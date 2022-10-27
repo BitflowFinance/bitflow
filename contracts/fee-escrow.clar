@@ -4,7 +4,7 @@
 
 
 ;; constants
-(define-constant CONTRACT-PUBLISHER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-constant CONTRACT-PUBLISHER 'ST38GBVK5HEJ0MBH4CRJ9HQEW86HX0H9AP3EJP4TW)
 (define-constant unauthorized-claim (err u1))
 (define-constant transfer-x-failed-err (err u2))
 (define-constant transfer-y-failed-err (err u3))
