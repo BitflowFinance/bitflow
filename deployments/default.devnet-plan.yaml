@@ -27,10 +27,10 @@ plan:
             path: contracts/fee-escrow.clar
             anchor-block-only: true
         - contract-publish:
-            contract-name: stableswap-v3
+            contract-name: stableswap-v4
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 305920
-            path: contracts/stableswap-v3.clar
+            path: contracts/stableswap-v4.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: usda-token

@@ -10,7 +10,7 @@
 
 (define-data-var token-uri (string-utf8 256) u"")
 
-(define-constant CONTRACT-OWNER 'ST38GBVK5HEJ0MBH4CRJ9HQEW86HX0H9AP3EJP4TW)
+(define-constant CONTRACT-OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 (define-constant ERR-UNAUTHORIZED-MINT (err u100))
 
 

@@ -16,8 +16,8 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define-constant CONTRACT_ADDRESS 'ST38GBVK5HEJ0MBH4CRJ9HQEW86HX0H9AP3EJP4TW.stableswap-v4)
-(define-constant FEE_TO_ADDRESS 'ST38GBVK5HEJ0MBH4CRJ9HQEW86HX0H9AP3EJP4TW.fee-escrow)
+(define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v4)
+(define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow)
 (define-constant INIT_BH block-height)
 (define-constant MAX_REWARD_CYCLES u100)
 (define-constant REWARD_CYCLE_INDEXES (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100))
@@ -656,6 +656,36 @@
   )
 )
 
+(define-public (escrow-xbtc (xbtc-token <sip-010-trait>) (amount uint) (numCycles uint))
+    (let (
+      (cycle-preference-is-set (map-set cycle-staking {id: tx-sender} {num-cycles: numCycles}))
+      (staking-cycles (get-list-of-staking-cycles numCycles))
+      (valid-staking-cycles (map shift-verified-cycles-to-current staking-cycles))
+    ) 
+    (begin 
+      ;; todo: assert that the xbtc contract is correct. don't want to get credit for staking a bs token
+      (asserts! (> numCycles u0) MIN_STAKING_LENGTH_ERR) ;; escrow for at least one cycle
+      (asserts! (<= numCycles MAX_REWARD_CYCLES) MAX_STAKING_LENGTH_ERR) ;; limited by length of the REWARD_CYCLES_INDEXES listed
+      (print valid-staking-cycles)
+      (asserts! (is-ok (contract-call? xbtc-token transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
+      (ok (fold update-user-escrow-data valid-staking-cycles {amt: amount, who: tx-sender}))
+    )
+  )
+)
+
+
+(define-public (claim-rewards-many (reward-cycles (list 10 uint)) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>))
+  (ok 
+    (map 
+      claim-rewards-at-cycle
+      reward-cycles
+      (list token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait)
+      (list token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait)
+      (list lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait) 
+      (list xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait)        
+    )
+  )
+)
 
 (define-public (claim-rewards-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
   ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
@@ -778,22 +808,7 @@
 ) 
 
 
-(define-public (escrow-xbtc (xbtc-token <sip-010-trait>) (amount uint) (numCycles uint))
-    (let (
-      (cycle-preference-is-set (map-set cycle-staking {id: tx-sender} {num-cycles: numCycles}))
-      (staking-cycles (get-list-of-staking-cycles numCycles))
-      (valid-staking-cycles (map shift-verified-cycles-to-current staking-cycles))
-    ) 
-    (begin 
-      ;; todo: assert that the xbtc contract is correct. don't want to get credit for staking a bs token
-      (asserts! (> numCycles u0) MIN_STAKING_LENGTH_ERR) ;; escrow for at least one cycle
-      (asserts! (<= numCycles MAX_REWARD_CYCLES) MAX_STAKING_LENGTH_ERR) ;; limited by length of the REWARD_CYCLES_INDEXES listed
-      (print valid-staking-cycles)
-      (asserts! (is-ok (contract-call? xbtc-token transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
-      (ok (fold update-user-escrow-data valid-staking-cycles {amt: amount, who: tx-sender}))
-    )
-  )
-)
+
 
 
 ;; TODO 
