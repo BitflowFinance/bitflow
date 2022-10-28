@@ -13,6 +13,7 @@
 (define-constant MIN_STAKING_LENGTH_ERR (err u9))
 (define-constant CLAIM_TOO_EARLY_ERR (err u10))
 (define-constant ALREADY_CLAIMED_ERR (err u11))
+(define-constant PANIC_ERR (err u12))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -809,16 +810,160 @@
 
 
 
+(define-private (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
+  ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
+  ;; what happens if staking 50 btc for x cycles, and then 50 more for x cycles starting at x+1 (cycle following prev lockup). can't claim xbtc or lptokens using current logic.
+  (let 
+    (
+      (token-x (contract-of token-x-trait))
+      (token-y (contract-of token-y-trait))
+      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (fee-balance-x (get fee-balance-x pair))
+      (fee-balance-y (get fee-balance-y pair))
+      (cycleFeeData (get-total-cycle-fees token-x token-y rewardCycle))
+      (total-x-rewards (get token-x-bal cycleFeeData))
+      (total-y-rewards (get token-y-bal cycleFeeData))
+      (totalStakingData (get-total-lp-staked-at-cycle token-x token-y rewardCycle))
+      (userStakingData (get-lp-staked-by-user-at-cycle token-x token-y rewardCycle who))
+      (total-amount-staked (get total-lp-staked totalStakingData))
+      (user-amount-staked (get lp-staked userStakingData))
+      (claimed (get reward-claimed userStakingData))
+      (user-rewards-pct 
+        (if (> total-amount-staked u0) 
+          (/ (* u100 user-amount-staked) total-amount-staked)
+          u0
+        )     
+      )
+      (user-x-rewards (/ (* user-rewards-pct total-x-rewards) u100))
+      (user-y-rewards (/ (* user-rewards-pct total-y-rewards) u100))
+      (pool-balance-x (- (get balance-x pair) user-x-rewards))
+      (pool-balance-y (- (get balance-y pair) user-y-rewards))
+      (claimer who)
+      (this-cycle (unwrap-panic (get-current-cycle))) ;; cycle when calling function
+      (reward-cycle rewardCycle) ;; cycle claiming rewards from
+      (following-cycle (+ u1 reward-cycle)) ;; cycle after the one claiming rewards from
+      (user-lp-staked-following-cycle (get lp-staked (get-lp-staked-by-user-at-cycle token-x token-y following-cycle who)))
+      (lp-claim
+        (if (> user-amount-staked user-lp-staked-following-cycle)
+              (- user-amount-staked user-lp-staked-following-cycle)
+              u0
+              ))
+      (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle who reward-cycle)))     
+      (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle who following-cycle)))
+      (xbtc-claim
+        (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+              (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+              u0
+        )
+      )
+
+      (is-lp (> user-amount-staked u0))
+      (uses-bitflow-escrow (> user-xbtc-escrowed u0))
+      (is-both (and is-lp uses-bitflow-escrow))
+      (available-bps FEE_ON_SWAPS) ;; 5 for lps and xbtc escrow'ers. 1 for foundation.
+      (earned-bps (if is-both
+                      u5 
+                      (if is-lp 
+                        u3 
+                        (if uses-bitflow-escrow
+                          u1 
+                          u0)))
+      )
+      (user-x-rewards-proportional (/ (* earned-bps user-x-rewards ) available-bps))
+      (user-y-rewards-proportional (/ (* earned-bps user-y-rewards ) available-bps))
+
+    )
+    (begin 
+
+      (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
+      ;; (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
+      ;; (asserts! (> this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
+    )
+    (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
+    ;; (ok (list user-x-rewards-proportional))
+  )
+) 
+
+(define-private (get-user-reward-data (cycle uint) (pool-info {who: principal, token-x-trait: <sip-010-trait>, token-y-trait: <sip-010-trait>, lp-token-trait: <sip-010-trait>, xbtc-token-trait: <sip-010-trait>}))
+  (let (
+    (who (get who pool-info))
+    (txt (get token-x-trait pool-info))
+    (tyt (get token-y-trait pool-info))
+    (lptt (get lp-token-trait pool-info))
+    (xbtctt (get xbtc-token-trait pool-info))
+    (reward-list (get-rewards-at-cycle cycle who txt tyt lptt xbtctt))
+
+
+    ) 
+    (if (is-ok (get-rewards-at-cycle cycle who txt tyt lptt xbtctt))
+      pool-info
+      pool-info ;; should return something else here to showcase that stake-lp-at-cycle threw an error
+    )
+  )
+)
+
+(define-read-only (get-rewards-and-principal-many-cycles (list-of-cycles (list 1000 uint)) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>))
+    (let (
+      (txt token-x-trait)
+      (tyt token-y-trait)
+      (lpt lp-token-trait)
+      (btt xbtc-token-trait)
+      (list-of-cycle-rewards 
+        (map 
+          get-rewards-at-cycle
+          list-of-cycles
+          (list who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who who)
+          (list txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt)
+          (list tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt)
+          (list lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt) 
+          (list btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt)        
+        )
+      )
+
+    )
+    (begin
+      (ok list-of-cycle-rewards)
+    )
+  )
+)
+
+;; (define-read-only (get-rewards-and-principal-sum (reward-cycles (list 10 uint)) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>))
+;;     (let (
+;;       (list-of-cycle-rewards 
+;;         (map 
+;;           get-rewards-at-cycle
+;;           reward-cycles
+;;           (list who who who who who who who who who who)
+;;           (list token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait)
+;;           (list token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait)
+;;           (list lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait) 
+;;           (list xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait)        
+;;         )
+;;       )
+;;       (list0 (unwrap! (unwrap! (element-at list-of-cycle-rewards u0) PANIC_ERR) PANIC_ERR))
+;;       (list1 (unwrap! (unwrap! (element-at list-of-cycle-rewards u1) PANIC_ERR) PANIC_ERR))
+;;       (list2 (unwrap! (unwrap! (element-at list-of-cycle-rewards u2) PANIC_ERR) PANIC_ERR))
+;;       (list3 (unwrap! (unwrap! (element-at list-of-cycle-rewards u3) PANIC_ERR) PANIC_ERR))
+;;       (list4 (unwrap! (unwrap! (element-at list-of-cycle-rewards u4) PANIC_ERR) PANIC_ERR))
+;;       (list5 (unwrap! (unwrap! (element-at list-of-cycle-rewards u5) PANIC_ERR) PANIC_ERR))
+;;       (list6 (unwrap! (unwrap! (element-at list-of-cycle-rewards u6) PANIC_ERR) PANIC_ERR))
+;;       (list7 (unwrap! (unwrap! (element-at list-of-cycle-rewards u7) PANIC_ERR) PANIC_ERR))
+;;       (list8 (unwrap! (unwrap! (element-at list-of-cycle-rewards u8) PANIC_ERR) PANIC_ERR))
+;;       (list9 (unwrap! (unwrap! (element-at list-of-cycle-rewards u9) PANIC_ERR) PANIC_ERR))
+
+;;       (added (map + list0 list1 list2 list3 list4 list5 list6 list7 list8 list9))
+
+;;     )
+;;     (begin 
+;;       (ok added)
+;;     )
+;;   )
+;; )
+
 
 
 ;; TODO 
-;; - DONE. ensure fees are collected by protocol on each swap.
 ;; - (can do this off-chain) write function to calculate which cycles the principal/user participated
 ;;    - ^^ same + AND where user has not claimed rewards
-;; - DONE. write function to calculate proportional rewards for LP staker per pair
-;; - DONE. write function to calculate proportional rewards for xBTC escrower per pair
-;; - write function to calculate proportional rewards for xBTC escrow + LP staker per pair
-;; - DONE write function to calculate fees generated for the protocol per pair
-;; - DONE write function to claim rewards at a cycle
-;; - write function to claim rewards over several cycles
+;; - write read-only function to calculate proportional rewards for xBTC escrow + LP staker per pair
 ;; - integrate curve functinoality rather than regular DEX
