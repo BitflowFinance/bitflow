@@ -971,19 +971,28 @@
 
 ;;SEE LINE 430 HERE: https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
 (define-public (exchange (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (dx uint) (min-dy uint)) 
+;; i: Index value of the token to send.
+
+;; j: Index value of the token to receive.
+
+;; dx: The amount of i being exchanged.
+
+;; min_dy: The minimum amount of j to receive. If the swap would result in less, the transaction will revert.
     (let (
       (txt token-x-trait)
       (tyt token-y-trait)
       (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
       (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
-      ;; (xp u1) ;; unsure.
-      (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
-      (dxlf (- dx fee)) ;;dx less fees
+      ;; (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
+      ;; (dxlf (- dx fee)) ;;dx less fees
 
       (old_x (unwrap! (element-at old_balances u0) (err u13)))
       (old_y (unwrap! (element-at old_balances u1) (err u14)))
-      (x (+ old_x dxlf))
-      (y (get-y x))
+      ;; (x (+ old_x dxlf))
+      (x (+ old_x dx))
+      (y (get-y x old_x old_y))
+      (dy (- old_y y))
+
       
       
 
@@ -997,23 +1006,32 @@
 )
 
 ;; make private
-(define-read-only (get-y (x-bal uint))
+(define-read-only (get-y (x-bal uint) (old-x-bal uint) (old-y-bal uint))
+
     (let (
       (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
       (amp A_COEF)
       (num-coins u2)
       (Ann (* amp num-coins)) ;; = amp * N_COINS
+      (D (get-D old-x-bal old-y-bal amp))
+      
+      (S (* u2 x-bal)) ;; lines 374 - 381
 
-      (D (get-D x-bal amp)) ;; need a function called get-D, w/ inputs: amp and "xp" (i think is x w/ precision factored in)
-      (S (* u2 x-bal))
-      (c_0 (/ (* D D) (* x-bal num-coins)))
-      (c_1 (/ (* c_0 D) (* x-bal num-coins)))
-      (c (/ (* c_1 D) (* Ann num-coins)))
+      (c_0 D)
+      (c_1 (/ (* c_0 D) (* num-coins x-bal)))
+      (c_2 (/ (* c_1 D) (* num-coins x-bal))) ;; not y-bal according to for loop logic in 374 - 380
+      (c (/ (* c_2 D) (* num-coins Ann)))
       (b (+ S (/ D Ann)))
+
+
+      ;; (c_0 (/ (* D D) (* x-bal num-coins)))
+      ;; (c_1 (/ (* c_0 D) (* x-bal num-coins)))
+      ;; (c (/ (* c_1 D) (* Ann num-coins)))
+      ;; (b (+ S (/ D Ann)))
       (y_prev u0)
+      (new_y D)
       (iterations (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 u150 u151 u152 u153 u154 u155 u156 u157 u158 u159 u160 u161 u162 u163 u164 u165 u166 u167 u168 u169 u170 u171 u172 u173 u174 u175 u176 u177 u178 u179 u180 u181 u182 u183 u184 u185 u186 u187 u188 u189 u190 u191 u192 u193 u194 u195 u196 u197 u198 u199 u200 u201 u202 u203 u204 u205 u206 u207 u208 u209 u210 u211 u212 u213 u214 u215 u216 u217 u218 u219 u220 u221 u222 u223 u224 u225 u226 u227 u228 u229 u230 u231 u232 u233 u234 u235 u236 u237 u238 u239 u240 u241 u242 u243 u244 u245 u246 u247 u248 u249 u250 u251 u252 u253 u254 u255))
-      (y D)
-      (y-info {y-prev: y_prev, y: y, c: c, b: b, D: D})
+      (y-info {y-prev: y_prev, y: new_y, c: c, b: b, D: D})
       (y_output (get y (fold y-for-loop iterations y-info)))
       
       )
@@ -1025,40 +1043,56 @@
 ;; TODO: implement clarity version of break where same y-info map is returned
 ;; make private
 (define-read-only (y-for-loop (n uint) (y-info {y-prev: uint, y: uint, c: uint, b: uint, D: uint}))
+    ;; """
+    ;; Calculate x[i] if one reduces D from being calculated for xp to D
+    ;; Done by solving quadratic equation iteratively.
+    ;; x_1**2 + x1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
+    ;; x_1**2 + b*x_1 = c
+    ;; x_1 = (x_1**2 + c) / (2*x_1 + b)
+    ;; """
   (let (
       (c (get c y-info))
       (b (get b y-info))
       (D (get D y-info))
-      (y-prev (get y y-info))
-      (y_ (get y y-info))
-      (y (/ (+ c (* y_ y_)) (- (+ (* u2 y_) b) D))) ;;y = (y*y + c) / (2 * y + b - D)
-
-      (small-diff (is-eq y y-prev)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal.
-      (y-info-updated (if small-diff 
-          y-info ;; if small-diff, don't update
-          (merge y-info {
-            y-prev: y-prev,
-            y: y
-          })
-        )
+      (y_prev (get y-prev y-info))
+      (y (get y y-info))
+      (new_y_numerator (+ (* y y) c)) ;; (y*y + c)
+      (new_y_denominator (- (+ (* u2 y) b) D)) ;; (2 * y + b - D)
+      (new_y (/ new_y_numerator new_y_denominator))
+      
+      (y-info-updated 
+        (merge y-info {
+          y-prev: y,
+          y: new_y
+        })
       )
+
+      ;; (small-diff (is-eq new_y y)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal. runtime error if y = u0 OR (2 * y + b - D) < 0
+      ;; (y-info-updated (if small-diff 
+      ;;     y-info ;; if small-diff, don't update
+      ;;     (merge y-info {
+      ;;       y-prev: y,
+      ;;       y: new_y
+      ;;     })
+      ;;   )
+      ;; )
     ) 
     y-info-updated
   )
 )
 
 ;;make private
-(define-read-only (get-D (x-bal uint) (amp uint))
+(define-read-only (get-D (old-x-bal uint) (old-y-bal uint) (amp uint))
   (let (
       (num-coins u2)
-      (S (* num-coins x-bal))
+      (S (+ old-x-bal old-y-bal))
       (D_prev u0)
       (D S)
       (Ann (* num-coins amp))
       (iterations (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 u150 u151 u152 u153 u154 u155 u156 u157 u158 u159 u160 u161 u162 u163 u164 u165 u166 u167 u168 u169 u170 u171 u172 u173 u174 u175 u176 u177 u178 u179 u180 u181 u182 u183 u184 u185 u186 u187 u188 u189 u190 u191 u192 u193 u194 u195 u196 u197 u198 u199 u200 u201 u202 u203 u204 u205 u206 u207 u208 u209 u210 u211 u212 u213 u214 u215 u216 u217 u218 u219 u220 u221 u222 u223 u224 u225 u226 u227 u228 u229 u230 u231 u232 u233 u234 u235 u236 u237 u238 u239 u240 u241 u242 u243 u244 u245 u246 u247 u248 u249 u250 u251 u252 u253 u254 u255))
       ;; (y-info {y-prev: y_prev, y: y, c: c, b: b, D: D})
       ;; (y_output (get y (fold y-for-loop iterations y-info)))
-      (D-info {D_P: D_prev, D: D, x-bal: x-bal, Ann: Ann, S: S})
+      (D-info {D_P: D_prev, D: D, old-x-bal: old-x-bal, old-y-bal: old-y-bal, Ann: Ann, S: S})
       (D_output (get D (fold D-for-loop iterations D-info)))
     ) 
     D_output
@@ -1067,21 +1101,26 @@
 
 ;; lines 205 - 218 https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
 ;; make private
-(define-read-only (D-for-loop (n uint) (D-info {D_P: uint, D: uint, x-bal: uint, Ann: uint, S: uint}))
+(define-read-only (D-for-loop (n uint) (D-info {D_P: uint, D: uint, old-x-bal: uint, old-y-bal: uint, Ann: uint, S: uint}))
   (let (
       (num-coins u2)
-      (x-bal (get x-bal D-info))
+      (old-x-bal (get old-x-bal D-info))
+      (old-y-bal (get old-y-bal D-info))
       (Ann (get Ann D-info))
       (S (get S D-info))
       ;; (D_P (get D D-info))
       (D_P (get D_P D-info ))
       (D (get D D-info))
-      (new_D_P (/ (* D_P D) (* x-bal num-coins))) ;;D_P = D_P * D / (_x * N_COINS)
-      (new_D_numerator (* (+ (* Ann S) (* D_P num-coins)) D)) ;; D = (Ann * S + D_P * N_COINS) * D 
-      (new_D_denominator (+ (* (- Ann u1) D) (* (+ num-coins u1) D_P))) ;;((Ann - 1) * D + (N_COINS + 1) * D_P)
+
+      ;; for t in [x,y]:
+      ;;   D_P = D_P * D / (t * N_COINS)
+      (new_D_P (/ (* D_P (* D D)) (* u4 (* old-x-bal old-y-bal))))
+
+      (new_D_numerator (* (+ (* Ann S) (* new_D_P num-coins)) D)) ;; D = (Ann * S + D_P * N_COINS) * D 
+      (new_D_denominator (+ (* (- Ann u1) D) (* (+ num-coins u1) new_D_P))) ;;((Ann - 1) * D + (N_COINS + 1) * D_P)
       (new_D (/ new_D_numerator new_D_denominator))
 
-      (small-diff (is-eq D D_P)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal.
+      (small-diff (is-eq new_D D)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal.
       (D-info-updated (if small-diff 
           D-info ;; if small-diff, don't update
           (merge D-info {
