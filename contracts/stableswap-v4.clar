@@ -14,9 +14,11 @@
 (define-constant CLAIM_TOO_EARLY_ERR (err u10))
 (define-constant ALREADY_CLAIMED_ERR (err u11))
 (define-constant PANIC_ERR (err u12))
+(define-constant UNAUTHORIZED_PAIR_ADJUSTMENT (err u15))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-constant CONTRACT_OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 (define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v4)
 (define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow)
 (define-constant INIT_BH block-height)
@@ -96,6 +98,11 @@
   { amount: uint }
 )
 
+(define-map ApprovedPairs
+  {token-x-contract: principal,
+  token-y-contract: principal}
+  {approval: bool}
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; READ ONLY FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-read-only (get-pair-data (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>))
@@ -259,6 +266,18 @@
   )
 )
 
+(define-read-only (verify-approved-pair (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>))
+ (default-to
+    {approval: false} 
+    (map-get? ApprovedPairs 
+      {
+        token-x-contract: (contract-of token-x-trait),
+        token-y-contract: (contract-of token-y-trait)
+      }
+    )
+  )
+)
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRIVATE FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -408,7 +427,11 @@
         fee-to-address: (some FEE_TO_ADDRESS),
         name: pair-name,
       })
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
     )
+    ;; ensure that malicious actors cannot add bad pairs to remove tokens from the contract. adding a pair should require governance approval.
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
+
     ;; for tokens X and Y, trying to create a pair Y-X will fail if X-Y already exists. and vice versa
     (asserts!
       (and
@@ -433,6 +456,7 @@
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
       (pair (unwrap-panic (map-get? pairs-data-map { token-x: token-x, token-y: token-y })))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
       (contract-address (as-contract tx-sender))
       (recipient-address tx-sender)
       (balance-x (get balance-x pair))
@@ -463,7 +487,8 @@
         }
       )
     )
-    
+
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)    
     (asserts! (is-ok (as-contract (contract-call? .usd-lp mint new-shares who))) (err u1110))
     (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (contract-call? token-y-trait transfer new-y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
@@ -481,6 +506,7 @@
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
       (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
       (fee-balance-x (get fee-balance-x pair))
       (fee-balance-y (get fee-balance-y pair))
       (balance-x (- (get balance-x pair) fee-balance-x))
@@ -501,8 +527,10 @@
           }
         )
       )
+
     )
 
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
     (asserts! (<= percent u100) VALUE_OUT_OF_RANGE_ERR)
     (asserts! (is-ok (contract-call? .usd-lp burn tx-sender withdrawal)) (err u1110))
     (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer withdrawal-x contract-address sender none))) TRANSFER_X_FAILED_ERR)
@@ -533,6 +561,8 @@
       (total-y-rewards (get token-y-bal cycleFeeData))
 
       (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+
       (balance-x (get balance-x pair))
       (balance-y (get balance-y pair))
       (contract-address (as-contract tx-sender))
@@ -555,6 +585,7 @@
 
     (asserts! (< min-dy dy) TOO_MUCH_SLIPPAGE_ERR)
 
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
     (asserts! (is-ok (contract-call? token-x-trait transfer dxlf sender contract-address none)) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (contract-call? token-x-trait transfer fee sender FEE_TO_ADDRESS none)) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (as-contract (contract-call? token-y-trait transfer dy contract-address sender none))) TRANSFER_Y_FAILED_ERR)
@@ -591,6 +622,7 @@
         (total-y-rewards (get token-y-bal cycleFeeData))
  
         (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+        (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
         (balance-x (get balance-x pair))
         (balance-y (get balance-y pair))
         (contract-address (as-contract tx-sender))
@@ -609,6 +641,7 @@
 
     (asserts! (< min-dx dx) TOO_MUCH_SLIPPAGE_ERR)
 
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
     (asserts! (is-ok (contract-call? token-y-trait transfer dylf sender contract-address none)) TRANSFER_Y_FAILED_ERR)
     (asserts! (is-ok (contract-call? token-y-trait transfer fee sender FEE_TO_ADDRESS none)) TRANSFER_Y_FAILED_ERR)
     (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer dx contract-address sender none))) TRANSFER_X_FAILED_ERR)
@@ -811,7 +844,7 @@
 
 
 
-(define-private (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
+(define-read-only (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
   ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
   ;; what happens if staking 50 btc for x cycles, and then 50 more for x cycles starting at x+1 (cycle following prev lockup). can't claim xbtc or lptokens using current logic.
   (let 
@@ -964,13 +997,11 @@
 
 
 ;; TODO 
-;; - (can do this off-chain) write function to calculate which cycles the principal/user participated
-;;    - ^^ same + AND where user has not claimed rewards
 ;; - write read-only function to calculate proportional rewards for xBTC escrow + LP staker per pair
-;; - integrate curve functinoality rather than regular DEX
+
 
 ;;SEE LINE 430 HERE: https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
-(define-public (exchange (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (dx uint) (min-dy uint)) 
+(define-read-only (get-dy (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (dx uint)) 
 ;; i: Index value of the token to send.
 
 ;; j: Index value of the token to receive.
@@ -983,25 +1014,30 @@
       (tyt token-y-trait)
       (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
       (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
-      ;; (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
-      ;; (dxlf (- dx fee)) ;;dx less fees
+      (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
+      (dxlf (- dx fee)) ;;dx less fees
 
       (old_x (unwrap! (element-at old_balances u0) (err u13)))
       (old_y (unwrap! (element-at old_balances u1) (err u14)))
-      ;; (x (+ old_x dxlf))
-      (x (+ old_x dx))
+      (x (+ old_x dxlf))
+      ;; (x (+ old_x dx))
       (y (get-y x old_x old_y))
       (dy (- old_y y))
-
-      
+      ;; (dy (get-y x old_x old_y))
+      ;; (y (- old_y dy))
+ 
+      (price (/ (* u100 dy) dx))
       
 
       )
-      (begin
-        (asserts! (not (is-eq txt tyt)) INVALID_PAIR_ERR) ;; prevents swapping for same token
-        (print old_balances)
-        (ok (list x old_x y old_y))
-      )
+      ;; (begin
+      ;;   (asserts! (not (is-eq txt tyt)) INVALID_PAIR_ERR) ;; prevents swapping for same token
+      ;;   ;; (print old_balances)
+      ;;   ;; (ok (list x old_x y old_y))
+      ;;   (ok )
+      ;; )
+      (print price)
+      (ok dy)
     )
 )
 
@@ -1015,21 +1051,20 @@
       (Ann (* amp num-coins)) ;; = amp * N_COINS
       (D (get-D old-x-bal old-y-bal amp))
       
-      (S (* u2 x-bal)) ;; lines 374 - 381
+      ;; (S (* u2 x-bal)) ;; lines 374 - 381
+      (S x-bal)
 
-      (c_0 D)
+      (c_0 (* u1000000 D))
       (c_1 (/ (* c_0 D) (* num-coins x-bal)))
-      (c_2 (/ (* c_1 D) (* num-coins x-bal))) ;; not y-bal according to for loop logic in 374 - 380
-      (c (/ (* c_2 D) (* num-coins Ann)))
+      ;; (c_2 (/ (* c_1 D) (* num-coins x-bal))) ;; not y-bal according to for loop logic in 374 - 380
+      (c_3 (/ (* c_1 D) (* num-coins Ann)))
+      (c (/ c_3 u1000000))
       (b (+ S (/ D Ann)))
 
 
-      ;; (c_0 (/ (* D D) (* x-bal num-coins)))
-      ;; (c_1 (/ (* c_0 D) (* x-bal num-coins)))
-      ;; (c (/ (* c_1 D) (* Ann num-coins)))
-      ;; (b (+ S (/ D Ann)))
       (y_prev u0)
       (new_y D)
+      ;; (new_y old-y-bal)
       (iterations (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 u150 u151 u152 u153 u154 u155 u156 u157 u158 u159 u160 u161 u162 u163 u164 u165 u166 u167 u168 u169 u170 u171 u172 u173 u174 u175 u176 u177 u178 u179 u180 u181 u182 u183 u184 u185 u186 u187 u188 u189 u190 u191 u192 u193 u194 u195 u196 u197 u198 u199 u200 u201 u202 u203 u204 u205 u206 u207 u208 u209 u210 u211 u212 u213 u214 u215 u216 u217 u218 u219 u220 u221 u222 u223 u224 u225 u226 u227 u228 u229 u230 u231 u232 u233 u234 u235 u236 u237 u238 u239 u240 u241 u242 u243 u244 u245 u246 u247 u248 u249 u250 u251 u252 u253 u254 u255))
       (y-info {y-prev: y_prev, y: new_y, c: c, b: b, D: D})
       (y_output (get y (fold y-for-loop iterations y-info)))
@@ -1060,22 +1095,25 @@
       (new_y_denominator (- (+ (* u2 y) b) D)) ;; (2 * y + b - D)
       (new_y (/ new_y_numerator new_y_denominator))
       
-      (y-info-updated 
-        (merge y-info {
-          y-prev: y,
-          y: new_y
-        })
-      )
-
-      ;; (small-diff (is-eq new_y y)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal. runtime error if y = u0 OR (2 * y + b - D) < 0
-      ;; (y-info-updated (if small-diff 
-      ;;     y-info ;; if small-diff, don't update
-      ;;     (merge y-info {
-      ;;       y-prev: y,
-      ;;       y: new_y
-      ;;     })
-      ;;   )
+      ;; (y-info-updated 
+      ;;   (merge y-info {
+      ;;     y-prev: y,
+      ;;     y: new_y
+      ;;   })
       ;; )
+      (bigger-y (> new_y y))
+      (small-diff (is-eq new_y y)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal. runtime error if y = u0 OR (2 * y + b - D) < 0
+      ;; (converged (or bigger-y small-diff))
+      (converged (and bigger-y small-diff))
+
+      (y-info-updated (if converged 
+          y-info ;; if small-diff, don't update
+          (merge y-info {
+            y-prev: y,
+            y: new_y
+          })
+        )
+      )
     ) 
     y-info-updated
   )
@@ -1087,12 +1125,13 @@
       (num-coins u2)
       (S (+ old-x-bal old-y-bal))
       (D_prev u0)
+      (D_P S)
       (D S)
       (Ann (* num-coins amp))
       (iterations (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 u150 u151 u152 u153 u154 u155 u156 u157 u158 u159 u160 u161 u162 u163 u164 u165 u166 u167 u168 u169 u170 u171 u172 u173 u174 u175 u176 u177 u178 u179 u180 u181 u182 u183 u184 u185 u186 u187 u188 u189 u190 u191 u192 u193 u194 u195 u196 u197 u198 u199 u200 u201 u202 u203 u204 u205 u206 u207 u208 u209 u210 u211 u212 u213 u214 u215 u216 u217 u218 u219 u220 u221 u222 u223 u224 u225 u226 u227 u228 u229 u230 u231 u232 u233 u234 u235 u236 u237 u238 u239 u240 u241 u242 u243 u244 u245 u246 u247 u248 u249 u250 u251 u252 u253 u254 u255))
       ;; (y-info {y-prev: y_prev, y: y, c: c, b: b, D: D})
       ;; (y_output (get y (fold y-for-loop iterations y-info)))
-      (D-info {D_P: D_prev, D: D, old-x-bal: old-x-bal, old-y-bal: old-y-bal, Ann: Ann, S: S})
+      (D-info {D_P: D_P, D: D, old-x-bal: old-x-bal, old-y-bal: old-y-bal, Ann: Ann, S: S})
       (D_output (get D (fold D-for-loop iterations D-info)))
     ) 
     D_output
@@ -1108,8 +1147,8 @@
       (old-y-bal (get old-y-bal D-info))
       (Ann (get Ann D-info))
       (S (get S D-info))
-      ;; (D_P (get D D-info))
-      (D_P (get D_P D-info ))
+      (D_P (get D D-info))
+      ;; (D_P (get D_P D-info ))
       (D (get D D-info))
 
       ;; for t in [x,y]:
@@ -1120,9 +1159,13 @@
       (new_D_denominator (+ (* (- Ann u1) D) (* (+ num-coins u1) new_D_P))) ;;((Ann - 1) * D + (N_COINS + 1) * D_P)
       (new_D (/ new_D_numerator new_D_denominator))
 
-      (small-diff (is-eq new_D D)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal.
-      (D-info-updated (if small-diff 
-          D-info ;; if small-diff, don't update
+
+      (bigger-D (> new_D D))
+      (small-diff (is-eq new_D D))
+      (converged (and bigger-D small-diff))
+
+      (D-info-updated (if converged 
+          D-info
           (merge D-info {
             D_P: new_D_P,
             D: new_D
@@ -1131,5 +1174,117 @@
       )
     ) 
     D-info-updated
+  )
+)
+
+;; same as get-dy, but solving for dx pair
+;;SEE LINE 430 HERE: https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
+(define-read-only (get-dx (token-y-trait <sip-010-trait>) (token-x-trait <sip-010-trait>)  (dy uint)) 
+    (let (
+      (txt token-x-trait)
+      (tyt token-y-trait)
+      (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
+      (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
+      (fee (/ (* FEE_ON_SWAPS dy) u10000)) ;; 6 basis points
+      (dylf (- dy fee)) ;;dx less fees
+
+      (old_x (unwrap! (element-at old_balances u0) (err u13)))
+      (old_y (unwrap! (element-at old_balances u1) (err u14)))
+      (y (+ old_y dylf))
+      (x (get-x y old_x old_y))
+      (dx (- old_x x))
+      )
+      (ok dx)
+    )
+)
+
+;; make private
+(define-read-only (get-x (y-bal uint) (old-x-bal uint) (old-y-bal uint))
+
+    (let (
+      (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
+      (amp A_COEF)
+      (num-coins u2)
+      (Ann (* amp num-coins)) ;; = amp * N_COINS
+      (D (get-D old-x-bal old-y-bal amp))
+      
+      ;; (S (* u2 x-bal)) ;; lines 374 - 381
+      (S y-bal)
+
+      (c_0 (* u1000000 D))
+      (c_1 (/ (* c_0 D) (* num-coins y-bal)))
+      ;; (c_2 (/ (* c_1 D) (* num-coins x-bal))) ;; not y-bal according to for loop logic in 374 - 380
+      (c_3 (/ (* c_1 D) (* num-coins Ann)))
+      (c (/ c_3 u1000000))
+      (b (+ S (/ D Ann)))
+
+
+      (x_prev u0)
+      (new_x D)
+      ;; (new_y old-y-bal)
+      (iterations (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 u150 u151 u152 u153 u154 u155 u156 u157 u158 u159 u160 u161 u162 u163 u164 u165 u166 u167 u168 u169 u170 u171 u172 u173 u174 u175 u176 u177 u178 u179 u180 u181 u182 u183 u184 u185 u186 u187 u188 u189 u190 u191 u192 u193 u194 u195 u196 u197 u198 u199 u200 u201 u202 u203 u204 u205 u206 u207 u208 u209 u210 u211 u212 u213 u214 u215 u216 u217 u218 u219 u220 u221 u222 u223 u224 u225 u226 u227 u228 u229 u230 u231 u232 u233 u234 u235 u236 u237 u238 u239 u240 u241 u242 u243 u244 u245 u246 u247 u248 u249 u250 u251 u252 u253 u254 u255))
+      (x-info {x-prev: x_prev, x: new_x, c: c, b: b, D: D})
+      (x_output (get x (fold x-for-loop iterations x-info)))
+      
+      )
+      x_output
+    )
+)
+
+;; lines 387 - 397 https://github.com/curvefi/curve-contract/blob/master/contracts/pools/3pool/StableSwap3Pool.vy
+;; TODO: implement clarity version of break where same y-info map is returned
+;; make private
+(define-read-only (x-for-loop (n uint) (x-info {x-prev: uint, x: uint, c: uint, b: uint, D: uint}))
+    ;; """
+    ;; Calculate x[i] if one reduces D from being calculated for xp to D
+    ;; Done by solving quadratic equation iteratively.
+    ;; x_1**2 + x1 * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
+    ;; x_1**2 + b*x_1 = c
+    ;; x_1 = (x_1**2 + c) / (2*x_1 + b)
+    ;; """
+  (let (
+      (c (get c x-info))
+      (b (get b x-info))
+      (D (get D x-info))
+      (x_prev (get x-prev x-info))
+      (x (get x x-info))
+      (new_x_numerator (+ (* x x) c)) ;; (y*y + c)
+      (new_x_denominator (- (+ (* u2 x) b) D)) ;; (2 * y + b - D)
+      (new_x (/ new_x_numerator new_x_denominator))
+      
+      (bigger-x (> new_x x))
+      (small-diff (is-eq new_x x)) ;;x - x-prev <= 1, but dealing w/ uint so checking if equal. runtime error if x = u0 OR (2 * x + b - D) < 0
+      (converged (and bigger-x small-diff))
+
+      (x-info-updated (if converged 
+          x-info ;; if small-diff, don't update
+          (merge x-info {
+            x-prev: x,
+            x: new_x
+          })
+        )
+      )
+    ) 
+    x-info-updated
+  )
+)
+
+;; should be subject to a governance vote
+;; for now, only contract owner can do this
+;; should only be allowed to set to true? what if gov wants to vote on stopping a trading pair?
+(define-public (set-pair-approval (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (tradeable bool))
+  (let (
+    (x-contract (contract-of token-x-trait))
+    (y-contract (contract-of token-y-trait))
+    (who tx-sender)
+    ) 
+    (begin 
+      (asserts! (is-eq who CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT)
+      (map-set ApprovedPairs 
+        {token-x-contract: x-contract, token-y-contract: y-contract}
+        {approval: tradeable}
+      )
+      (ok tradeable)
+    )
   )
 )
