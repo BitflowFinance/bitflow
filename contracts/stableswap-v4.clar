@@ -127,16 +127,6 @@
   )
 )
 
-(define-public (get-symbol (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>))
-  (ok
-    (concat
-      (unwrap-panic (as-max-len? (unwrap-panic (contract-call? token-x-trait get-symbol)) u15))
-      (concat "-"
-        (unwrap-panic (as-max-len? (unwrap-panic (contract-call? token-y-trait get-symbol)) u15))
-      )
-    )
-  )
-)
 
 ;; returns both token balances for a given pool
 (define-read-only (get-token-balances (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>))
@@ -563,13 +553,14 @@
       (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
       (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
 
-      (balance-x (get balance-x pair))
-      (balance-y (get balance-y pair))
+      ;; (balance-x (get balance-x pair))
+      ;; (balance-y (get balance-y pair))
       (contract-address (as-contract tx-sender))
       (sender tx-sender)
       (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
       (dxlf (- dx fee)) ;;dx less fees
-      (dy (/ (* u1000 balance-y dxlf) (+ (* u1000 balance-x) (* u1000 dxlf))))
+      ;; (dy (/ (* u1000 balance-y dxlf) (+ (* u1000 balance-x) (* u1000 dxlf))))
+      (dy (unwrap! (get-dy token-x-trait token-y-trait dx) PANIC_ERR)) ;; gets dy using stableswap invariant
       (pair-updated
         (merge pair
           {
@@ -623,14 +614,15 @@
  
         (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
         (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
-        (balance-x (get balance-x pair))
-        (balance-y (get balance-y pair))
+        ;; (balance-x (get balance-x pair))
+        ;; (balance-y (get balance-y pair))
         (contract-address (as-contract tx-sender))
         (sender tx-sender)
         ;; check formula, vs x-for-y???
         (fee (/ (* FEE_ON_SWAPS dy) u10000)) ;; 6 bp
         (dylf (- dy fee)) ;;dy less fees
-        (dx (/ (* u1000 balance-x dylf) (+ (* u1000 balance-y) (* u1000 dylf))))
+        ;; (dx (/ (* u1000 balance-x dylf) (+ (* u1000 balance-y) (* u1000 dylf)))) ;; works for x*y=k
+        (dx (unwrap! (get-dx token-y-trait token-x-trait dy) PANIC_ERR)) ;; gets dx using stableswap invariant
         (pair-updated (merge pair {
           balance-x: (- (get balance-x pair) dx),
           balance-y: (+ (get balance-y pair) dylf),
@@ -731,16 +723,6 @@
       (ok list-of-cycle-rewards)
     )
   )
-  ;; (ok 
-  ;;   (map 
-  ;;     claim-rewards-at-cycle
-  ;;     reward-cycles
-  ;;     (list token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait token-x-trait)
-  ;;     (list token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait token-y-trait)
-  ;;     (list lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait lp-token-trait) 
-  ;;     (list xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait xbtc-token-trait)        
-  ;;   )
-  ;; )
 )
 
 (define-public (claim-rewards-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
