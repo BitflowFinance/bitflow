@@ -15,6 +15,7 @@
 (define-constant ALREADY_CLAIMED_ERR (err u11))
 (define-constant PANIC_ERR (err u12))
 (define-constant UNAUTHORIZED_PAIR_ADJUSTMENT (err u15))
+(define-constant ZERO-BALANCE-ERR (err u16))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -27,6 +28,7 @@
 (define-constant CYCLE_LENGTH u144)
 (define-constant FEE_ON_SWAPS u6)
 (define-constant A_COEF u100)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT  VARIABLES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-map pairs-data-map
@@ -433,8 +435,45 @@
 
     (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-data)
 
-    (try! (add-to-position token-x-trait token-y-trait x y))
+    (try! (add-initial-liquidity token-x-trait token-y-trait x y tx-sender))
     (print { object: "pair", action: "created", data: pair-data })
+    (ok true)
+  )
+)
+
+(define-public (add-initial-liquidity (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (x uint) (y uint) (who principal))
+  (let
+    (
+      (token-x (contract-of token-x-trait))
+      (token-y (contract-of token-y-trait))
+      (pair (unwrap-panic (map-get? pairs-data-map { token-x: token-x, token-y: token-y })))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (contract-address CONTRACT_ADDRESS)
+      (recipient-address who)
+      (balance-x (get balance-x pair))
+      (balance-y (get balance-y pair))
+      ;; (D (+ x y)
+      (total-shares (+ x y))
+      (mint-amount total-shares)
+
+      (pair-updated (merge pair {
+        shares-total: total-shares,
+        balance-x: x,
+        balance-y: y
+      }))
+    )
+
+    (asserts! (> x u0) ZERO-BALANCE-ERR)
+    (asserts! (> y u0) ZERO-BALANCE-ERR)
+    (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
+    (asserts! (is-eq tx-sender CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT) ;; should be another mechanism to initialize the pool
+
+    (asserts! (is-ok (as-contract (contract-call? .usd-lp mint mint-amount who))) (err u1110))
+    (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
+    (asserts! (is-ok (contract-call? token-y-trait transfer y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
+
+    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    (print { object: "pair", action: "liquidity-added", data: pair-updated })
     (ok true)
   )
 )
@@ -451,37 +490,36 @@
       (recipient-address tx-sender)
       (balance-x (get balance-x pair))
       (balance-y (get balance-y pair))
+      ;; (is-new-pool (or (is-eq balance-x u0) (is-eq balance-y u0)))
+      (D_0 (get-D balance-x balance-y A_COEF))
+        ;; (if is-new-pool ;;prevents divide by zero err
+        ;;   u1
+        ;;   (get-D balance-x balance-y A_COEF)))
+      (D_1 (get-D (+ x balance-x) (+ y balance-y) A_COEF))
+      (current-total-shares (get shares-total pair))
+      (mint-amount 
+        (if (is-eq current-total-shares u0)
+          D_1
+          (/ (* current-total-shares (- D_1 D_0) ) D_0) ;;rounds down
+        )
+      )
       (who tx-sender)
 
-      (new-y
-        (if (is-eq (get shares-total pair) u0)
-          y
-          (/ (* x balance-y) balance-x)
-        )
-      )
-      (new-shares
-        (if (is-eq (get shares-total pair) u0)
-          (sqrti (* (+ balance-x x) (+ balance-y new-y)))
-          (- (sqrti (* (+ balance-x x) (+ balance-y new-y))) (get shares-total pair))
-        )
-      )
       (pair-updated (merge pair {
-        shares-total: (+ new-shares (get shares-total pair)),
+        shares-total: (+ current-total-shares mint-amount),
         balance-x: (+ balance-x x),
-        balance-y: (+ balance-y new-y)
+        balance-y: (+ balance-y y)
       }))
-      (new-amounts 
-        {
-            x-amount: x,
-            y-amount: new-y
-        }
-      )
     )
 
+    ;; does single sided staking work here as long as neither token balance is zero to start? 
+    ;;ensure that somebody adds liquidity to both pairs?
+    ;; (asserts! (> x u0) ZERO-BALANCE-ERR) 
+    ;; (asserts! (> y u0) ZERO-BALANCE-ERR)
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)    
-    (asserts! (is-ok (as-contract (contract-call? .usd-lp mint new-shares who))) (err u1110))
+    (asserts! (is-ok (as-contract (contract-call? .usd-lp mint mint-amount who))) (err u1110))
     (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
-    (asserts! (is-ok (contract-call? token-y-trait transfer new-y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
+    (asserts! (is-ok (contract-call? token-y-trait transfer y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
 
     (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
     (print { object: "pair", action: "liquidity-added", data: pair-updated })
@@ -1153,6 +1191,9 @@
       (D_P (get D D-info))
       ;; (D_P (get D_P D-info ))
       (D (get D D-info))
+      ;; (enough-x (asserts! (> old-x-bal u0) ZERO-BALANCE-ERR))
+      ;; (enough-y (asserts! (> old-y-bal u0) ZERO-BALANCE-ERR))
+
 
       ;; for t in [x,y]:
       ;;   D_P = D_P * D / (t * N_COINS)
