@@ -29,6 +29,9 @@ path = "contracts/external/xbtc-token.clar"
 [contracts.xusd-token]
 path = "contracts/external/xusd-token.clar"
 
+[contracts.xusd-v2]
+path = "contracts/xusd-v2.clar"
+
 [repl]
 costs_version = 2
 parser_version = 2

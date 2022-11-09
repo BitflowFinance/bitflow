@@ -15,10 +15,10 @@ plan:
             path: contracts/external/sip-010-trait-ft-standard.clar
             anchor-block-only: true
         - contract-publish:
-            contract-name: usd-lp
+            contract-name: xbtc-token
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 23250
-            path: contracts/usd-lp.clar
+            cost: 18090
+            path: contracts/external/xbtc-token.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: fee-escrow
@@ -27,10 +27,22 @@ plan:
             path: contracts/fee-escrow.clar
             anchor-block-only: true
         - contract-publish:
+            contract-name: usd-lp
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 23250
+            path: contracts/usd-lp.clar
+            anchor-block-only: true
+        - contract-publish:
             contract-name: stableswap-v4
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 305920
+            cost: 2357230
             path: contracts/stableswap-v4.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: xusd-v2
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 16740
+            path: contracts/xusd-v2.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: usda-token
@@ -39,14 +51,8 @@ plan:
             path: contracts/external/usda-token.clar
             anchor-block-only: true
         - contract-publish:
-            contract-name: xbtc-token
-            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 18090
-            path: contracts/external/xbtc-token.clar
-            anchor-block-only: true
-        - contract-publish:
             contract-name: xusd-token
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 25780
+            cost: 16740
             path: contracts/external/xusd-token.clar
             anchor-block-only: true
