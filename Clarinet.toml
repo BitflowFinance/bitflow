@@ -11,11 +11,20 @@ path = ".requirements"
 [contracts.fee-escrow]
 path = "contracts/fee-escrow.clar"
 
+[contracts.helper]
+path = "contracts/helper.clar"
+
 [contracts.sip-010-trait-ft-standard]
 path = "contracts/external/sip-010-trait-ft-standard.clar"
 
 [contracts.stableswap-v4]
 path = "contracts/stableswap-v4.clar"
+
+[contracts.stableswap-v5]
+path = "contracts/stableswap-v5.clar"
+
+[contracts.stableswap-v6]
+path = "contracts/stableswap-v6.clar"
 
 [contracts.usd-lp]
 path = "contracts/usd-lp.clar"
