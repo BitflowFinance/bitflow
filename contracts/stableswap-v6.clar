@@ -98,8 +98,9 @@
   { who: principal,
     cycle: uint
   } 
-  { amount: uint }
-  ;;TODO: add check if already claimed
+  { amount: uint,
+    xbtc-to-claim: uint
+  }
 )
 
 (define-map ApprovedPairs
@@ -235,7 +236,7 @@
 
 (define-read-only (get-user-xbtc-escrowed-at-cycle (who principal) (cycleNum uint))
  (default-to
-    {amount: u0} 
+    {amount: u0, xbtc-to-claim: u0} 
     (map-get? UserBitflowEscrow 
       {
         who: who,
@@ -377,7 +378,11 @@
 (define-private (set-xbtc-escrowed-by-user-at-cycle (rewardCycle uint) (who principal) (amount uint))
   (let 
     (
-    (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle who rewardCycle)))     
+    (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle who rewardCycle))
+    (user-xbtc-to-claim (get xbtc-to-claim userBitflowEscrowData))
+    (user-xbtc-escrowed (get amount userBitflowEscrowData))    
+    ;; (user-xbtc-to-claim (get xbtc-to-claim (get-user-xbtc-escrowed-at-cycle who rewardCycle)))
+    ;; (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle who rewardCycle)))     
     (total-xbtc-escrowed (get amount (get-total-xbtc-escrowed-at-cycle rewardCycle)))     
 
     )
@@ -387,7 +392,10 @@
           who: who,
           cycle: rewardCycle
         }
-        { amount: (+ user-xbtc-escrowed amount) }
+        { 
+          amount: (+ user-xbtc-escrowed amount),
+          xbtc-to-claim: user-xbtc-to-claim
+        }
       )
       (map-set TotalBitflowEscrow
         { cycle: rewardCycle }
@@ -753,12 +761,25 @@
       (cycle-preference-is-set (map-set cycle-staking {id: tx-sender} {num-cycles: numCycles}))
       (staking-cycles (get-list-of-staking-cycles numCycles))
       (valid-staking-cycles (map shift-verified-cycles-to-current staking-cycles))
+      (last-cycle (unwrap! (element-at valid-staking-cycles (- (len staking-cycles) u1)) PANIC_ERR))
+      (next-cycle (+ last-cycle u1))
+      (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender next-cycle))
+      (user-xbtc-to-claim (get xbtc-to-claim userBitflowEscrowData))
+      (user-xbtc-escrowed (get amount userBitflowEscrowData))    
     ) 
     (begin 
       ;; todo: assert that the xbtc contract is correct. don't want to get credit for staking a bs token
       (asserts! (> numCycles u0) MIN_STAKING_LENGTH_ERR) ;; escrow for at least one cycle
       (asserts! (<= numCycles MAX_REWARD_CYCLES) MAX_STAKING_LENGTH_ERR) ;; limited by length of the REWARD_CYCLES_INDEXES listed
       (print valid-staking-cycles)
+      (map-set UserBitflowEscrow
+        {who: tx-sender,
+         cycle: next-cycle
+        } 
+        {amount: user-xbtc-escrowed,
+         xbtc-to-claim: (+ user-xbtc-to-claim amount)
+        }
+      )
       (asserts! (is-ok (contract-call? xbtc-token transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
       (ok (fold update-user-escrow-data valid-staking-cycles {amt: amount, who: tx-sender}))
     )
@@ -831,13 +852,17 @@
     ;;           (- user-amount-staked user-lp-staked-following-cycle)
     ;;           u0
     ;;           ))
-      (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle tx-sender reward-cycle)))     
-      (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle tx-sender following-cycle)))
-      (xbtc-claim
-        (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-              (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-              u0
-              ))
+      (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender reward-cycle))
+      (user-xbtc-escrowed (get amount userBitflowEscrowData))     
+      (xbtc-claim (get xbtc-to-claim userBitflowEscrowData))
+
+    ;;   (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle tx-sender following-cycle)))
+    ;;   (xbtc-claim
+    ;;     (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+    ;;           (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+    ;;           u0
+    ;;           ))
+
       (pair-updated
         (merge pair
           {
@@ -980,18 +1005,12 @@
       (user-y-rewards-proportional (/ (* earned-bps user-y-rewards ) available-bps))
 
     )
-    ;; (begin 
 
-    ;;   (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
-    ;;   ;; (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
-    ;;   ;; (asserts! (> this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
-    ;; )
+    ;; only need to check claimed from one map. can't claim xbtc w/o claiming lp principal.
     (if (or (is-eq claimed true) (>= rewardCycle this-cycle))  
       (ok (list u0 u0 u0 u0))
       (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
     )
-    ;; (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
-    ;; (ok (list user-x-rewards-proportional))
   )
 ) 
 
