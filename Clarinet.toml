@@ -23,6 +23,9 @@ path = "contracts/stableswap-v4.clar"
 [contracts.stableswap-v5]
 path = "contracts/stableswap-v5.clar"
 
+[contracts.stableswap-v6]
+path = "contracts/stableswap-v6.clar"
+
 [contracts.usd-lp]
 path = "contracts/usd-lp.clar"
 
