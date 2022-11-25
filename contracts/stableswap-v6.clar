@@ -15,13 +15,14 @@
 (define-constant ALREADY_CLAIMED_ERR (err u11))
 (define-constant PANIC_ERR (err u12))
 (define-constant UNAUTHORIZED_PAIR_ADJUSTMENT (err u15))
-(define-constant ZERO-BALANCE-ERR (err u16))
+(define-constant ZERO_BALANCE_ERR (err u16))
+(define-constant CALCULATING_REWARDS_AND_PRINCIPAL_ERR (err u17))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-constant CONTRACT_OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 (define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v6)
-(define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow-v2)
+(define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow-v3)
 (define-constant INIT_BH block-height)
 (define-constant MAX_REWARD_CYCLES u100)
 (define-constant REWARD_CYCLE_INDEXES (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100))
@@ -475,8 +476,8 @@
       }))
     )
 
-    (asserts! (> x u0) ZERO-BALANCE-ERR)
-    (asserts! (> y u0) ZERO-BALANCE-ERR)
+    (asserts! (> x u0) ZERO_BALANCE_ERR)
+    (asserts! (> y u0) ZERO_BALANCE_ERR)
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
     (asserts! (is-eq tx-sender CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT) ;; should be another mechanism to initialize the pool
 
@@ -526,8 +527,8 @@
 
     ;; does single sided staking work here as long as neither token balance is zero to start? 
     ;;ensure that somebody adds liquidity to both pairs?
-    ;; (asserts! (> x u0) ZERO-BALANCE-ERR) 
-    ;; (asserts! (> y u0) ZERO-BALANCE-ERR)
+    ;; (asserts! (> x u0) ZERO_BALANCE_ERR) 
+    ;; (asserts! (> y u0) ZERO_BALANCE_ERR)
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)    
     (asserts! (is-ok (as-contract (contract-call? .usd-lp mint mint-amount who))) (err u1110))
     (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
@@ -717,7 +718,7 @@
       (txc (contract-of token-x))
       (tyc (contract-of token-y))
 
-      (last-cycle (unwrap! (element-at staking-cycles (- (len staking-cycles) u1)) PANIC_ERR))
+      (last-cycle (unwrap! (element-at valid-staking-cycles (- (len valid-staking-cycles) u1)) PANIC_ERR))
       (next-cycle (+ last-cycle u1))
       (userStakingData (get-lp-staked-by-user-at-cycle txc tyc next-cycle tx-sender))
       (lp-claim (get lp-to-claim userStakingData))
@@ -744,7 +745,7 @@
         }
         {
           lp-staked: user-amount-staked,
-          reward-claimed: true,
+          reward-claimed: false,
           lp-to-claim: (+ lp-claim amount)
         }
       )
@@ -795,7 +796,7 @@
       (btt xbtc-token-trait)
       (list-of-cycle-rewards 
         (map 
-          claim-rewards-at-cycle
+          claim-rewards-and-principal-at-cycle
           reward-cycles
           (list txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt)
           (list tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt)
@@ -893,12 +894,15 @@
       (user-x-rewards-proportional (/ (* earned-bps user-x-rewards ) available-bps))
       (user-y-rewards-proportional (/ (* earned-bps user-y-rewards ) available-bps))
 
+      ;; only set claimed to true if the x-rewards or y-rewards were > u0
+      (claimed-val (or (> user-x-rewards-proportional u0) (> user-y-rewards-proportional u0)))
+
     )
     (begin 
 
       (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
       (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
-      (asserts! (> this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
+      (asserts! (>= this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
       (if (> user-x-rewards u0) 
           ;; (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer user-x-rewards contract-address sender none))) TRANSFER_X_FAILED_ERR)
           
@@ -929,16 +933,204 @@
         }
         {
           lp-staked: user-amount-staked,
-          reward-claimed: true,
+          reward-claimed: claimed-val,
           lp-to-claim: u0
         }
       )
     )
     (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
+
   )
 ) 
 
+;; (define-public (claim-rewards-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
+;;   ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
+;;   (let 
+;;     (
+;;       (token-x (contract-of token-x-trait))
+;;       (token-y (contract-of token-y-trait))
+;;       (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+;;       (fee-balance-x (get fee-balance-x pair))
+;;       (fee-balance-y (get fee-balance-y pair))
+;;       (this-cycle (unwrap-panic (get-current-cycle))) ;; cycle when calling function
 
+
+
+;;       (rewards-and-principal-to-claim (unwrap! (get-rewards-at-cycle rewardCycle tx-sender token-x-trait token-y-trait lp-token-trait xbtc-token-trait)) (err u123))
+;;       (user-x-rewards (element-at rewards-and-principal-to-claim u0))
+;;       (user-y-rewards (element-at rewards-and-principal-to-claim u1))
+;;       (lp-claim (element-at rewards-and-principal-to-claim u2))
+;;       (xbtc-claim (element-at rewards-and-principal-to-claim u3))
+
+;;       (claimed (get reward-claimed userStakingData))
+;;       ;;   ;; only set claimed-updated to true if the x-rewards or y-rewards were > u0. this way user can claim principal in one txn, and rewards in another if needed.
+;;       (claimed-updated 
+;;         (if claimed 
+;;             true 
+;;             (or (> user-x-rewards u0) (> user-y-rewards u0))
+;;         )
+;;       )
+
+;;       (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender reward-cycle))
+;;       (userBitflowEscrowDataUpdated (merge userBitflowEscrowData {xbtc-to-claim: u0}))
+;;       (userStakingData (get-lp-staked-by-user-at-cycle token-x token-y rewardCycle tx-sender))
+;;       (userStakingDataUpdated (merge userStakingData {reward-claimed: claimed-updated, lp-to-claim: u0}))
+
+;;       (pair-updated
+;;         (merge pair
+;;           {
+;;             fee-balance-x: (if (is-some (get fee-to-address pair))  ;; only collect fee when fee-to-address is set
+;;               (- (get fee-balance-x pair) user-x-rewards)
+;;               (get fee-balance-x pair)),
+
+;;             fee-balance-y: (if (is-some (get fee-to-address pair))  ;; only collect fee when fee-to-address is set
+;;               (- (get fee-balance-y pair) user-y-rewards)
+;;               (get fee-balance-y pair))
+;;           }
+;;         )
+;;       )
+
+;;     )
+;;     (begin 
+
+;;     ;;   (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
+;;       (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
+;;       (asserts! (>= this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
+;;       (if (> user-x-rewards u0) 
+;;           ;; (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer user-x-rewards contract-address sender none))) TRANSFER_X_FAILED_ERR)
+          
+;;           (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-x-trait claimer user-x-rewards))) TRANSFER_X_FAILED_ERR)
+;;           (asserts! (is-ok (ok true)) (err u123412341))
+;;       )
+;;       (if (> user-y-rewards u0) 
+;;           (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-y-trait claimer user-y-rewards))) TRANSFER_Y_FAILED_ERR)
+;;           (asserts! (is-ok (ok true)) (err u123412342))
+;;       )
+
+;;       (if (> lp-claim u0) 
+;;           (asserts! (is-ok (as-contract (contract-call? lp-token-trait transfer lp-claim CONTRACT_ADDRESS claimer none))) TRANSFER_LP_FAILED_ERR)
+;;           (asserts! (is-ok (ok true)) (err u123412343))
+;;       )
+      
+;;       (if (> xbtc-claim u0) 
+;;           (asserts! (is-ok (as-contract (contract-call? xbtc-token-trait transfer xbtc-claim CONTRACT_ADDRESS claimer none))) TRANSFER_LP_FAILED_ERR)
+;;           (asserts! (is-ok (ok true)) (err u123412344))
+;;       )
+;;       (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+;;       (map-set UserStakingData
+;;         {
+;;           token-x: token-x,
+;;           token-y: token-y,
+;;           rewardCycle: rewardCycle,
+;;           who: tx-sender
+;;         }
+;;         UserStakingDataUpdated
+;;       )
+;;       (map-set UserBitflowEscrow
+;;         {
+;;           who: who,
+;;           cycle: rewardCycle
+;;         }
+;;         UserBitflowEscrowDataUpdated
+;;       )
+;;     )
+;;     (ok (list user-x-rewards user-y-rewards lp-claim xbtc-claim))
+;;   )
+;; ) 
+
+(define-public (claim-rewards-and-principal-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
+    (let (
+            (claimer tx-sender)
+            (token-x (contract-of token-x-trait))
+            (token-y (contract-of token-y-trait))
+            (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+            (fee-balance-x (get fee-balance-x pair))
+            (fee-balance-y (get fee-balance-y pair))
+            (this-cycle (unwrap-panic (get-current-cycle))) ;; cycle when calling function
+            (userStakingData (get-lp-staked-by-user-at-cycle token-x token-y rewardCycle tx-sender))
+            (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender rewardCycle))
+
+
+            ;; (rewards-and-principal-to-claim (list u0 u0 u0 u0))
+            (rewards-and-principal-to-claim (unwrap-panic (get-rewards-at-cycle rewardCycle tx-sender token-x-trait token-y-trait lp-token-trait xbtc-token-trait)))
+            (user-x-rewards (unwrap! (element-at rewards-and-principal-to-claim u0) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
+            (user-y-rewards (unwrap! (element-at rewards-and-principal-to-claim u1) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
+            (lp-claim (unwrap! (element-at rewards-and-principal-to-claim u2) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
+            (xbtc-claim (unwrap! (element-at rewards-and-principal-to-claim u3) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
+
+
+            (claimed (get reward-claimed userStakingData))
+            ;;   ;; only set claimed-updated to true if the x-rewards or y-rewards were > u0. this way user can claim principal in one txn, and rewards in another if needed.
+            (claimed-updated 
+                (if claimed 
+                    true 
+                    (or (> user-x-rewards u0) (> user-y-rewards u0))
+                )
+            )
+
+            (userBitflowEscrowDataUpdated (merge userBitflowEscrowData {xbtc-to-claim: u0}))
+            (userStakingDataUpdated (merge userStakingData {reward-claimed: claimed-updated, lp-to-claim: u0}))
+
+            (pair-updated
+                (merge pair
+                {
+                    fee-balance-x: (if (is-some (get fee-to-address pair))  ;; only collect fee when fee-to-address is set
+                    (- (get fee-balance-x pair) user-x-rewards)
+                    (get fee-balance-x pair)),
+
+                    fee-balance-y: (if (is-some (get fee-to-address pair))  ;; only collect fee when fee-to-address is set
+                    (- (get fee-balance-y pair) user-y-rewards)
+                    (get fee-balance-y pair))
+                }
+                )
+            )
+        ) 
+        (begin 
+
+        ;;   (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
+        (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
+        (asserts! (>= this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
+        (if (> user-x-rewards u0) 
+            ;; (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer user-x-rewards contract-address sender none))) TRANSFER_X_FAILED_ERR)
+            
+            (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-x-trait claimer user-x-rewards))) TRANSFER_X_FAILED_ERR)
+            (asserts! (is-ok (ok true)) (err u123412341))
+        )
+        (if (> user-y-rewards u0) 
+            (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-y-trait claimer user-y-rewards))) TRANSFER_Y_FAILED_ERR)
+            (asserts! (is-ok (ok true)) (err u123412342))
+        )
+
+        (if (> lp-claim u0) 
+            (asserts! (is-ok (as-contract (contract-call? lp-token-trait transfer lp-claim CONTRACT_ADDRESS claimer none))) TRANSFER_LP_FAILED_ERR)
+            (asserts! (is-ok (ok true)) (err u123412343))
+        )
+        
+        (if (> xbtc-claim u0) 
+            (asserts! (is-ok (as-contract (contract-call? xbtc-token-trait transfer xbtc-claim CONTRACT_ADDRESS claimer none))) TRANSFER_LP_FAILED_ERR)
+            (asserts! (is-ok (ok true)) (err u123412344))
+        )
+        (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+        (map-set UserStakingData
+            {
+            token-x: token-x,
+            token-y: token-y,
+            rewardCycle: rewardCycle,
+            who: claimer
+            }
+            userStakingDataUpdated
+        )
+        (map-set UserBitflowEscrow
+            {
+            who: claimer,
+            cycle: rewardCycle
+            }
+            userBitflowEscrowDataUpdated
+        )
+        )
+        (ok (list user-x-rewards user-y-rewards lp-claim xbtc-claim))
+    )
+)
 
 (define-read-only (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
   ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
@@ -980,14 +1172,17 @@
     ;;           (- user-amount-staked user-lp-staked-following-cycle)
     ;;           u0
     ;;           ))
-      (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle who reward-cycle)))     
-      (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle who following-cycle)))
-      (xbtc-claim
-        (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-              (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-              u0
-        )
-      )
+      (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender reward-cycle))
+      (user-xbtc-escrowed (get amount userBitflowEscrowData))     
+      (xbtc-claim (get xbtc-to-claim userBitflowEscrowData))
+
+    ;;   (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle who following-cycle)))
+    ;;   (xbtc-claim
+    ;;     (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+    ;;           (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
+    ;;           u0
+    ;;     )
+    ;;   )
 
       (is-lp (> user-amount-staked u0))
       (uses-bitflow-escrow (> user-xbtc-escrowed u0))
@@ -1003,13 +1198,26 @@
       )
       (user-x-rewards-proportional (/ (* earned-bps user-x-rewards ) available-bps))
       (user-y-rewards-proportional (/ (* earned-bps user-y-rewards ) available-bps))
+      (is-future-cycle (> rewardCycle this-cycle))
+      (is-current-cycle (is-eq rewardCycle this-cycle))
+      (is-past-cycle (< rewardCycle this-cycle))
 
     )
 
     ;; only need to check claimed from one map. can't claim xbtc w/o claiming lp principal.
-    (if (or (is-eq claimed true) (>= rewardCycle this-cycle))  
+    ;; (if (or (is-eq claimed true) (>= rewardCycle this-cycle))  
+    ;;   (ok (list u0 u0 u0 u0))
+    ;;   (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
+    ;; )
+
+    ;;TODO: issue where user could claim principal from current cycle, and then are UNABLE to get the stableswap rewards.
+
+    (if (or (is-eq claimed true) is-future-cycle)  
       (ok (list u0 u0 u0 u0))
-      (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim))
+      (if is-current-cycle 
+        (ok (list u0 u0 lp-claim xbtc-claim)) ;; can't claim rewards from current cycle, only principal
+        (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim)) ;; must be a past cycle
+      )
     )
   )
 ) 
@@ -1268,8 +1476,8 @@
       (D_P (get D D-info))
       ;; (D_P (get D_P D-info ))
       (D (get D D-info))
-      ;; (enough-x (asserts! (> old-x-bal u0) ZERO-BALANCE-ERR))
-      ;; (enough-y (asserts! (> old-y-bal u0) ZERO-BALANCE-ERR))
+      ;; (enough-x (asserts! (> old-x-bal u0) ZERO_BALANCE_ERR))
+      ;; (enough-y (asserts! (> old-y-bal u0) ZERO_BALANCE_ERR))
 
 
       ;; for t in [x,y]:
