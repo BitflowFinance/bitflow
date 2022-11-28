@@ -21,7 +21,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-constant CONTRACT_OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
-(define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v6)
+(define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v7)
 (define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow-v3)
 (define-constant INIT_BH block-height)
 (define-constant MAX_REWARD_CYCLES u100)
@@ -866,11 +866,11 @@
         (if (> user-x-rewards u0) 
             ;; (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer user-x-rewards contract-address sender none))) TRANSFER_X_FAILED_ERR)
             
-            (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-x-trait claimer user-x-rewards))) TRANSFER_X_FAILED_ERR)
+            (asserts! (is-ok (as-contract (contract-call? .fee-escrow-v3 claim-token-rewards-from-escrow token-x-trait claimer user-x-rewards))) TRANSFER_X_FAILED_ERR)
             (asserts! (is-ok (ok true)) (err u123412341))
         )
         (if (> user-y-rewards u0) 
-            (asserts! (is-ok (as-contract (contract-call? .fee-escrow claim-token-rewards-from-escrow token-y-trait claimer user-y-rewards))) TRANSFER_Y_FAILED_ERR)
+            (asserts! (is-ok (as-contract (contract-call? .fee-escrow-v3 claim-token-rewards-from-escrow token-y-trait claimer user-y-rewards))) TRANSFER_Y_FAILED_ERR)
             (asserts! (is-ok (ok true)) (err u123412342))
         )
 

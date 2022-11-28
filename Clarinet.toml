@@ -11,6 +11,9 @@ path = ".requirements"
 [contracts.fee-escrow]
 path = "contracts/fee-escrow.clar"
 
+[contracts.fee-escrow-v3]
+path = "contracts/fee-escrow-v3.clar"
+
 [contracts.helper]
 path = "contracts/helper.clar"
 
@@ -25,6 +28,9 @@ path = "contracts/stableswap-v5.clar"
 
 [contracts.stableswap-v6]
 path = "contracts/stableswap-v6.clar"
+
+[contracts.stableswap-v7]
+path = "contracts/stableswap-v7.clar"
 
 [contracts.usd-lp]
 path = "contracts/usd-lp.clar"
