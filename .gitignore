@@ -14,6 +14,8 @@ backend/settings/Testnet.toml
 backend/history.txt
 .vscode/
 backend/.debug_history
+history.txt
+.debug_history
 
 # User-specific files
 *.rsuser
