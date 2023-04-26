@@ -867,19 +867,18 @@
       (txt token-x-trait)
       (tyt token-y-trait)
       (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
-      (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
       (fee (/ (* FEE_ON_SWAPS dx) u10000)) ;; 6 basis points
       (dxlf (- dx fee)) ;;dx less fees
-
+      (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
       (old_x (unwrap! (element-at old_balances u0) (err u13)))
       (old_y (unwrap! (element-at old_balances u1) (err u14)))
-      (x (+ old_x dxlf))
-      (y (get-y x old_x old_y))
-      (dy (- old_y y))
- 
-      (price (/ (* u100 dy) dx))
-      
+      ;; ensure there's always at least one unit of token y in the pool. eliminates ability to empty the pool of y entirely with extreme trades, which leads to div by zero err.
+      (old_y_protected (- old_y u1)) 
 
+      (x (+ old_x dxlf))
+      (y (get-y x old_x old_y_protected))
+      (dy (- old_y_protected y))
+      (price (/ (* u100 dy) dx))
       )
       (print price)
       (ok dy)
@@ -1026,15 +1025,19 @@
       (txt token-x-trait)
       (tyt token-y-trait)
       (rates FEE_ON_SWAPS) ;; on curve, rates = list of rates for N_COINS
-      (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
       (fee (/ (* FEE_ON_SWAPS dy) u10000)) ;; 6 basis points
       (dylf (- dy fee)) ;;dx less fees
 
+      (old_balances (unwrap! (get-token-balances txt tyt) PANIC_ERR))
       (old_x (unwrap! (element-at old_balances u0) (err u13)))
       (old_y (unwrap! (element-at old_balances u1) (err u14)))
+      ;; ensure there's always at least one unit of token x in the pool. eliminates ability to empty the pool of x entirely with extreme trades, which leads to div by zero err.
+      (old_x_protected (- old_x u1)) 
+
+
       (y (+ old_y dylf))
-      (x (get-x y old_x old_y))
-      (dx (- old_x x))
+      (x (get-x y old_x_protected old_y))
+      (dx (- old_x_protected x))
       )
       (ok dx)
     )
