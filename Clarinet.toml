@@ -1,58 +1,57 @@
 [project]
-name = "stableswap-v4"
+name = 'stableswap-v4'
+description = ''
 authors = []
-description = ""
 telemetry = false
+cache_dir = '.cache'
 requirements = []
-boot_contracts = ["pox", "costs-v2", "bns"]
-
-[project.cache_location]
-path = ".requirements"
-[contracts.fee-escrow]
-path = "contracts/fee-escrow.clar"
+[contracts.bitflow-sip-010]
+path = 'contracts/bitflow-sip-010.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.fee-escrow-v3]
-path = "contracts/fee-escrow-v3.clar"
-
-[contracts.helper]
-path = "contracts/helper.clar"
+path = 'contracts/fee-escrow-v3.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.sip-010-trait-ft-standard]
-path = "contracts/external/sip-010-trait-ft-standard.clar"
+path = 'contracts/external/sip-010-trait-ft-standard.clar'
+clarity_version = 1
+epoch = 2.05
 
-[contracts.stableswap-v4]
-path = "contracts/stableswap-v4.clar"
+[contracts.stableswap-v0-0-1]
+path = 'contracts/stableswap-v0-0-1.clar'
+clarity_version = 1
+epoch = 2.05
 
-[contracts.stableswap-v5]
-path = "contracts/stableswap-v5.clar"
-
-[contracts.stableswap-v6]
-path = "contracts/stableswap-v6.clar"
-
-[contracts.stableswap-v7]
-path = "contracts/stableswap-v7.clar"
 
 [contracts.usd-lp]
-path = "contracts/usd-lp.clar"
+path = 'contracts/usd-lp.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.usda-token]
-path = "contracts/external/usda-token.clar"
+path = 'contracts/external/usda-token.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.xbtc-token]
-path = "contracts/external/xbtc-token.clar"
+path = 'contracts/external/xbtc-token.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.xusd-token]
-path = "contracts/external/xusd-token.clar"
+path = 'contracts/external/xusd-token.clar'
+clarity_version = 1
+epoch = 2.05
 
 [contracts.xusd-v2]
-path = "contracts/xusd-v2.clar"
-
-[repl]
-costs_version = 2
-parser_version = 2
-
+path = 'contracts/xusd-v2.clar'
+clarity_version = 1
+epoch = 2.05
 [repl.analysis]
-passes = ["check_checker"]
+passes = ['check_checker']
 
 [repl.analysis.check_checker]
 strict = false

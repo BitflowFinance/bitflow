@@ -1,14 +1,20 @@
 
-;; trait-stableswap
+;; title: bitflow-sip-010
+;; version:
+;; summary:
+;; description:
+
+
+;; bitflow-lp-trait
 
 
 ;; this is an SIP-010 method with an additional functions used by swapr
 ;; as Clarity does not support "includes", copy the needed functions, and add new ones
 
-(define-trait trait-stableswap
+(define-trait bitflow-lp-trait
   (
     ;; Transfer from the caller to a new principal
-    (transfer (uint principal principal) (response bool uint))
+    (transfer (uint principal principal (optional (buff 34))) (response bool uint))
 
     ;; the human readable name of the token
     (get-name () (response (string-ascii 32) uint))
@@ -20,7 +26,7 @@
     (get-decimals () (response uint uint))
 
     ;; the balance of the passed principal
-    (get-balance-of (principal) (response uint uint))
+    (get-balance (principal) (response uint uint))
 
     ;; the current total supply (which does not need to be a constant)
     (get-total-supply () (response uint uint))
@@ -30,20 +36,20 @@
 
     ;; additional functions specific to swapr
 
-    ;; mint function only swapr contract can call
+    ;; mint function only bitflow contract can call
     (mint (principal uint) (response bool uint))
 
-    ;; burn function only swapr contract can call
+    ;; burn function only bitflow contract can call
     (burn (principal uint) (response bool uint))
 
     ;;
-    (get-data (principal) (response {
-      name: (string-ascii 32),
-      symbol: (string-ascii 32),
-      decimals: uint,
-      uri: (optional (string-utf8 256)),
-      supply: uint,
-      balance: uint,
-    } uint))
+    ;; (get-data (principal) (response {
+    ;;   name: (string-ascii 32),
+    ;;   symbol: (string-ascii 32),
+    ;;   decimals: uint,
+    ;;   uri: (optional (string-utf8 256)),
+    ;;   supply: uint,
+    ;;   balance: uint,
+    ;; } uint))
   )
 )

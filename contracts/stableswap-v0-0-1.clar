@@ -1,4 +1,10 @@
 
+;; title: stableswap-v0-0-1
+;; version:
+;; summary:
+;; description:
+
+(use-trait bitflow-lp-trait .bitflow-sip-010.bitflow-lp-trait)
 (use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ERROR CODES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -21,18 +27,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT CONSTANTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-constant CONTRACT_OWNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
-(define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v7)
+(define-constant CONTRACT_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap-v0-0-1)
 (define-constant FEE_TO_ADDRESS 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.fee-escrow-v3)
 (define-constant INIT_BH block-height)
 (define-constant MAX_REWARD_CYCLES u100)
 (define-constant REWARD_CYCLE_INDEXES (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100))
-(define-constant CYCLE_LENGTH u72) ;;half a day on avg
+(define-constant CYCLE_LENGTH u1) ;;one cycle per block 
 (define-constant FEE_ON_SWAPS u6)
 (define-constant A_COEF u100)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CONTRACT  VARIABLES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define-map pairs-data-map
+(define-map PairsDataMap
   {
     token-x: principal,
     token-y: principal,
@@ -49,7 +55,7 @@
 )
 
 ;; used to update UserStakingData everytime a principal stakes more LP tokens
-(define-map cycle-staking
+(define-map CycleStaking
   { id: principal }
   { num-cycles: uint}
 )
@@ -90,24 +96,17 @@
   }
 )
 
-(define-map TotalBitflowEscrow 
-  { cycle: uint } 
-  { amount: uint }
-)
-
-(define-map UserBitflowEscrow 
-  { who: principal,
-    cycle: uint
-  } 
-  { amount: uint,
-    xbtc-to-claim: uint
-  }
-)
-
 (define-map ApprovedPairs
   {token-x-contract: principal,
-  token-y-contract: principal}
+  token-y-contract: principal,
+  lp-token-contract: principal}
   {approval: bool}
+)
+
+(define-map LPTokenMap
+  {token1: principal, 
+  token2: principal}
+  {lp-contract: principal}
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; READ ONLY FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -116,7 +115,7 @@
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
     )
     (ok pair)
   )
@@ -127,7 +126,7 @@
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
     )
     (ok (get name pair))
   )
@@ -140,7 +139,7 @@
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
       (balance-x (get balance-x pair))
       (balance-y (get balance-y pair))
     )
@@ -153,7 +152,7 @@
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
       (balance-x (get balance-x pair))
     )
     (ok balance-x)
@@ -165,7 +164,7 @@
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
       (balance-y (get balance-y pair))
     )
     (ok balance-y)
@@ -224,51 +223,14 @@
   )
 )
 
-(define-read-only (get-total-xbtc-escrowed-at-cycle (cycleNum uint))
- (default-to
-    {amount: u0} 
-    (map-get? TotalBitflowEscrow 
-      {
-        cycle: cycleNum
-      }
-    )
-  )
-)
-
-(define-read-only (get-user-xbtc-escrowed-at-cycle (who principal) (cycleNum uint))
- (default-to
-    {amount: u0, xbtc-to-claim: u0} 
-    (map-get? UserBitflowEscrow 
-      {
-        who: who,
-        cycle: cycleNum
-      }
-    )
-  )
-)
-
-
-
-(define-read-only (get-pct-xbtc-escrow-at-cycle (who principal) (cycleNum uint))
-  (let (
-      (user-amount (get amount (get-user-xbtc-escrowed-at-cycle who cycleNum)))
-      (total-amount (get amount (get-total-xbtc-escrowed-at-cycle cycleNum)))
-      (pct (/ (* u100 user-amount) total-amount))
-    )
-    (if (> total-amount u0) 
-      (/ (* u100 user-amount) total-amount)
-      u0
-    )
-  )
-)
-
-(define-read-only (verify-approved-pair (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>))
+(define-read-only (verify-approved-pair (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>))
  (default-to
     {approval: false} 
     (map-get? ApprovedPairs 
       {
         token-x-contract: (contract-of token-x-trait),
-        token-y-contract: (contract-of token-y-trait)
+        token-y-contract: (contract-of token-y-trait),
+        lp-token-contract: (contract-of lp-token-trait)
       }
     )
   )
@@ -329,14 +291,14 @@
     ) 
     (if (is-ok (stake-lp-at-cycle who amt cycle token-x token-y))
       user-info
-      user-info ;; should return something else here to showcase that stake-lp-at-cycle threw an error
+      user-info ;; maybe return something else here to showcase that stake-lp-at-cycle threw an error
     )
   )
 )
 
 (define-private (verify-upcoming-cycle (cycle-num uint))
   (let (
-    (user-max-cycles-staking (get num-cycles (unwrap-panic (map-get? cycle-staking {id: tx-sender})))) ;;avoid unwrap-panic if possible
+    (user-max-cycles-staking (get num-cycles (unwrap-panic (map-get? CycleStaking {id: tx-sender})))) ;;avoid unwrap-panic if possible
     (valid-cycle (<= cycle-num user-max-cycles-staking)) 
     ) 
     valid-cycle
@@ -359,64 +321,9 @@
   )
 )
 
-
-(define-private (escrow-xbtc-at-cycle (who principal) (amt uint) (cycle-num uint)) 
-  (as-contract (set-xbtc-escrowed-by-user-at-cycle cycle-num who amt))
-)
-
-(define-private (update-user-escrow-data (cycle uint) (user-info {amt: uint, who: principal}))
-  (let (
-    (amt (get amt user-info))
-    (who (get who user-info))
-    ) 
-    (if (is-ok (escrow-xbtc-at-cycle who amt cycle))
-      user-info
-      user-info ;; should return something else here to showcase that stake-lp-at-cycle threw an error
-    )
-  )
-)
-
-(define-private (set-xbtc-escrowed-by-user-at-cycle (rewardCycle uint) (who principal) (amount uint))
-  (let 
-    (
-    (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle who rewardCycle))
-    (user-xbtc-to-claim (get xbtc-to-claim userBitflowEscrowData))
-    (user-xbtc-escrowed (get amount userBitflowEscrowData))    
-    ;; (user-xbtc-to-claim (get xbtc-to-claim (get-user-xbtc-escrowed-at-cycle who rewardCycle)))
-    ;; (user-xbtc-escrowed (get amount (get-user-xbtc-escrowed-at-cycle who rewardCycle)))     
-    (total-xbtc-escrowed (get amount (get-total-xbtc-escrowed-at-cycle rewardCycle)))     
-
-    )
-    (begin 
-      (map-set UserBitflowEscrow
-        {
-          who: who,
-          cycle: rewardCycle
-        }
-        { 
-          amount: (+ user-xbtc-escrowed amount),
-          xbtc-to-claim: user-xbtc-to-claim
-        }
-      )
-      (map-set TotalBitflowEscrow
-        { cycle: rewardCycle }
-        { amount: (+ total-xbtc-escrowed amount) }
-      )
-    )
-    (ok true)
-  )
-)
-
-(define-private (max-of (i1 uint) (i2 uint))
-  (if (> i1 i2)
-      i1
-      i2
-  )
-)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PUBLIC FUNCTIONS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-public (create-pair (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (pair-name (string-ascii 32)) (x uint) (y uint))
+(define-public (create-pair (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (pair-name (string-ascii 32)) (x uint) (y uint))
   (let
     (
       (name-x (unwrap-panic (contract-call? token-x-trait get-name)))
@@ -432,7 +339,7 @@
         fee-to-address: (some FEE_TO_ADDRESS),
         name: pair-name,
       })
-      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
     )
     ;; ensure that malicious actors cannot add bad pairs to remove tokens from the contract. adding a pair should require governance approval.
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
@@ -440,27 +347,28 @@
     ;; for tokens X and Y, trying to create a pair Y-X will fail if X-Y already exists. and vice versa
     (asserts!
       (and
-        (is-none (map-get? pairs-data-map { token-x: token-x, token-y: token-y }))
-        (is-none (map-get? pairs-data-map { token-x: token-y, token-y: token-x }))
+        (is-none (map-get? PairsDataMap { token-x: token-x, token-y: token-y }))
+        (is-none (map-get? PairsDataMap { token-x: token-y, token-y: token-x }))
       )
       PAIR_ALREADY_EXISTS_ERR
     )
 
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-data)
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-data)
 
-    (try! (add-initial-liquidity token-x-trait token-y-trait x y tx-sender))
+    (try! (add-initial-liquidity token-x-trait token-y-trait lp-token-trait x y tx-sender))
     (print { object: "pair", action: "created", data: pair-data })
     (ok true)
   )
 )
 
-(define-public (add-initial-liquidity (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (x uint) (y uint) (who principal))
+(define-public (add-initial-liquidity (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (x uint) (y uint) (who principal))
   (let
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap-panic (map-get? pairs-data-map { token-x: token-x, token-y: token-y })))
-      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (pair (unwrap-panic (map-get? PairsDataMap { token-x: token-x, token-y: token-y })))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
+      (lp-token (map-get? LPTokenMap {token1: token-x, token2: token-y}))
       (contract-address CONTRACT_ADDRESS)
       (recipient-address who)
       (balance-x (get balance-x pair))
@@ -479,26 +387,26 @@
     (asserts! (> x u0) ZERO_BALANCE_ERR)
     (asserts! (> y u0) ZERO_BALANCE_ERR)
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
-    (asserts! (is-eq tx-sender CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT) ;; should be another mechanism to initialize the pool
+    (asserts! (is-eq tx-sender CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT) ;; need a decentralized mechanism to initialize the pool in future versions
 
-    (asserts! (is-ok (as-contract (contract-call? .usd-lp mint mint-amount who))) (err u1110))
+    (asserts! (is-ok (as-contract (contract-call? lp-token-trait mint who mint-amount))) (err u1110))
     (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (contract-call? token-y-trait transfer y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
 
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
     (print { object: "pair", action: "liquidity-added", data: pair-updated })
     (ok true)
   )
 )
 
 ;; add tokens to a liquidity pool and receive LP tokens in return
-(define-public (add-to-position (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (x uint) (y uint))
+(define-public (add-to-position (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (x uint) (y uint))
   (let
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap-panic (map-get? pairs-data-map { token-x: token-x, token-y: token-y })))
-      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (pair (unwrap-panic (map-get? PairsDataMap { token-x: token-x, token-y: token-y })))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
       (contract-address (as-contract tx-sender))
       (recipient-address tx-sender)
       (balance-x (get balance-x pair))
@@ -525,34 +433,39 @@
       }))
     )
 
-    ;; does single sided staking work here as long as neither token balance is zero to start? 
-    ;;ensure that somebody adds liquidity to both pairs?
-    ;; (asserts! (> x u0) ZERO_BALANCE_ERR) 
-    ;; (asserts! (> y u0) ZERO_BALANCE_ERR)
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)    
-    (asserts! (is-ok (as-contract (contract-call? .usd-lp mint mint-amount who))) (err u1110))
-    (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
-    (asserts! (is-ok (contract-call? token-y-trait transfer y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
+    (asserts! (is-ok (as-contract (contract-call? lp-token-trait mint who mint-amount))) (err u1110))
+    
+    ;; adding single sided liquidity should work here 
+    (if (> x u0) 
+        (asserts! (is-ok (contract-call? token-x-trait transfer x tx-sender contract-address none)) TRANSFER_X_FAILED_ERR)
+        (asserts! true (err u123456789)) ;; (asserts! (is-ok (ok true)) (err u123412341))
 
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    )
+    (if (> y u0)
+        (asserts! (is-ok (contract-call? token-y-trait transfer y tx-sender contract-address none)) TRANSFER_Y_FAILED_ERR)
+        (asserts! true (err u123456789))
+    )
+
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
     (print { object: "pair", action: "liquidity-added", data: pair-updated })
     (ok true)
   )
 )
 
 ;; ;; convert lp tokens back to the underlying tokens in the liquidity pool: burn lp tokens, send withdrawal of token-x and token-y to user
-(define-public (reduce-position (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (percent uint))
+(define-public (reduce-position (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (percent uint))
   (let
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
-      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
       (fee-balance-x (get fee-balance-x pair))
       (fee-balance-y (get fee-balance-y pair))
       (balance-x (- (get balance-x pair) fee-balance-x))
       (balance-y (- (get balance-y pair) fee-balance-y))
-      (shares (unwrap! (contract-call? .usd-lp get-balance tx-sender) (err u1110)))
+      (shares (unwrap! (contract-call? lp-token-trait get-balance tx-sender) (err u1110)))
       (shares-total (get shares-total pair))
       (contract-address (as-contract tx-sender))
       (sender tx-sender)
@@ -573,12 +486,12 @@
 
     (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
     (asserts! (<= percent u100) VALUE_OUT_OF_RANGE_ERR)
-    (asserts! (is-ok (contract-call? .usd-lp burn tx-sender withdrawal)) (err u1110))
+    (asserts! (is-ok (contract-call? lp-token-trait burn tx-sender withdrawal)) (err u1110))
     (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer withdrawal-x contract-address sender none))) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (as-contract (contract-call? token-y-trait transfer withdrawal-y contract-address sender none))) TRANSFER_Y_FAILED_ERR)
 
     ;; (unwrap-panic (decrease-shares token-x token-y tx-sender withdrawal)) ;; should never fail, you know...
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
     (print { object: "pair", action: "liquidity-removed", data: pair-updated })
     (ok (list withdrawal-x withdrawal-y))
   )
@@ -587,7 +500,7 @@
 
 ;; swap dx of token-x for some amount dy of token-y based on current liquidity pool, returns (dx dy)
 ;; swap will fail when slippage is too high (trader doesn't get at least min-dy in return)
-(define-public (swap-x-for-y (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (dx uint) (min-dy uint))
+(define-public (swap-x-for-y (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (dx uint) (min-dy uint))
   ;; calculate dy
   ;; calculate fee on dx
   ;; transfer
@@ -601,8 +514,8 @@
       (total-x-rewards (get token-x-bal cycleFeeData))
       (total-y-rewards (get token-y-bal cycleFeeData))
 
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
-      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
 
       ;; (balance-x (get balance-x pair))
       ;; (balance-y (get balance-y pair))
@@ -632,7 +545,7 @@
     (asserts! (is-ok (contract-call? token-x-trait transfer fee sender FEE_TO_ADDRESS none)) TRANSFER_X_FAILED_ERR)
     (asserts! (is-ok (as-contract (contract-call? token-y-trait transfer dy contract-address sender none))) TRANSFER_Y_FAILED_ERR)
 
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
     (map-set CycleFeeData
       {
         token-x: token-x,
@@ -651,7 +564,7 @@
 
 ;; swap dy of token-y for some amount dx of token-x based on current liquidity pool, returns (dy dx)
 ;; swap will fail when slippage is too high (trader doesn't get at least min-dx in return)
-(define-public (swap-y-for-x (token-y-trait <sip-010-trait>) (token-x-trait <sip-010-trait>) (dy uint) (min-dx uint))
+(define-public (swap-y-for-x (token-y-trait <sip-010-trait>) (token-x-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (dy uint) (min-dx uint))
   ;; calculate dx
   ;; calculate fee on dy
   ;; transfer
@@ -663,16 +576,13 @@
         (total-x-rewards (get token-x-bal cycleFeeData))
         (total-y-rewards (get token-y-bal cycleFeeData))
  
-        (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
-        (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait)))
-        ;; (balance-x (get balance-x pair))
-        ;; (balance-y (get balance-y pair))
+        (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+        (is-approved-pair (get approval (verify-approved-pair token-x-trait token-y-trait lp-token-trait)))
+
         (contract-address (as-contract tx-sender))
         (sender tx-sender)
-        ;; check formula, vs x-for-y???
         (fee (/ (* FEE_ON_SWAPS dy) u10000)) ;; 6 bp
         (dylf (- dy fee)) ;;dy less fees
-        ;; (dx (/ (* u1000 balance-x dylf) (+ (* u1000 balance-y) (* u1000 dylf)))) ;; works for x*y=k
         (dx (unwrap! (get-dx token-y-trait token-x-trait dy) PANIC_ERR)) ;; gets dx using stableswap invariant
         (pair-updated (merge pair {
           balance-x: (- (get balance-x pair) dx),
@@ -689,7 +599,7 @@
     (asserts! (is-ok (contract-call? token-y-trait transfer fee sender FEE_TO_ADDRESS none)) TRANSFER_Y_FAILED_ERR)
     (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer dx contract-address sender none))) TRANSFER_X_FAILED_ERR)
 
-    (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+    (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
     (map-set CycleFeeData
       {
         token-x: token-x,
@@ -708,12 +618,12 @@
  
 
 ;; TODO: need to find a consistent mapping for token-x and token-y. if order is swapped, the LP staked is tracked separately !!!
-(define-public (stake-LP-tokens (lp-token <sip-010-trait>) (token-x <sip-010-trait>) (token-y <sip-010-trait>) (amount uint) (numCycles uint))
+(define-public (stake-LP-tokens (lp-token-trait <bitflow-lp-trait>) (token-x <sip-010-trait>) (token-y <sip-010-trait>) (amount uint) (numCycles uint))
   (let (
-      (cycle-preference-is-set (map-set cycle-staking {id: tx-sender} {num-cycles: numCycles}))
+      (cycle-preference-is-set (map-set CycleStaking {id: tx-sender} {num-cycles: numCycles}))
       (staking-cycles (get-list-of-staking-cycles numCycles))
       (valid-staking-cycles (map shift-verified-cycles-to-current staking-cycles))
-      (is-approved-pair (get approval (verify-approved-pair token-x token-y)))
+      (is-approved-pair (get approval (verify-approved-pair token-x token-y lp-token-trait)))
 
       (txc (contract-of token-x))
       (tyc (contract-of token-y))
@@ -730,8 +640,8 @@
       ;; ensure that the pair already exists 
       (asserts!
         (or
-          (is-some (get name (map-get? pairs-data-map { token-x: txc, token-y: tyc })))
-          (is-some (get name (map-get? pairs-data-map { token-x: tyc, token-y: txc })))
+          (is-some (get name (map-get? PairsDataMap { token-x: txc, token-y: tyc })))
+          (is-some (get name (map-get? PairsDataMap { token-x: tyc, token-y: txc })))
         )
         INVALID_PAIR_ERR
       )
@@ -750,50 +660,18 @@
         }
       )
       (print valid-staking-cycles)
-      (asserts! is-approved-pair INVALID_PAIR_ERR)
-      (asserts! (is-ok (contract-call? lp-token transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
+      (asserts! is-approved-pair UNAUTHORIZED_PAIR_ADJUSTMENT)
+      (asserts! (is-ok (contract-call? lp-token-trait transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
       (ok (fold update-user-staking-data valid-staking-cycles {token-x: txc, token-y: tyc, amt: amount, who: tx-sender}))
     )
   )
 )
 
-(define-public (escrow-xbtc (xbtc-token <sip-010-trait>) (amount uint) (numCycles uint))
-    (let (
-      (cycle-preference-is-set (map-set cycle-staking {id: tx-sender} {num-cycles: numCycles}))
-      (staking-cycles (get-list-of-staking-cycles numCycles))
-      (valid-staking-cycles (map shift-verified-cycles-to-current staking-cycles))
-      (last-cycle (unwrap! (element-at valid-staking-cycles (- (len staking-cycles) u1)) PANIC_ERR))
-      (next-cycle (+ last-cycle u1))
-      (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender next-cycle))
-      (user-xbtc-to-claim (get xbtc-to-claim userBitflowEscrowData))
-      (user-xbtc-escrowed (get amount userBitflowEscrowData))    
-    ) 
-    (begin 
-      ;; todo: assert that the xbtc contract is correct. don't want to get credit for staking a bs token
-      (asserts! (> numCycles u0) MIN_STAKING_LENGTH_ERR) ;; escrow for at least one cycle
-      (asserts! (<= numCycles MAX_REWARD_CYCLES) MAX_STAKING_LENGTH_ERR) ;; limited by length of the REWARD_CYCLES_INDEXES listed
-      (print valid-staking-cycles)
-      (map-set UserBitflowEscrow
-        {who: tx-sender,
-         cycle: next-cycle
-        } 
-        {amount: user-xbtc-escrowed,
-         xbtc-to-claim: (+ user-xbtc-to-claim amount)
-        }
-      )
-      (asserts! (is-ok (contract-call? xbtc-token transfer amount tx-sender CONTRACT_ADDRESS none)) TRANSFER_LP_FAILED_ERR)
-      (ok (fold update-user-escrow-data valid-staking-cycles {amt: amount, who: tx-sender}))
-    )
-  )
-)
-
-
-(define-public (claim-rewards-many (reward-cycles (list 1000 uint)) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>))
+(define-public (claim-rewards-many (reward-cycles (list 1000 uint)) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>))
     (let (
       (txt token-x-trait)
       (tyt token-y-trait)
       (lpt lp-token-trait)
-      (btt xbtc-token-trait)
       (list-of-cycle-rewards 
         (map 
           claim-rewards-and-principal-at-cycle
@@ -801,7 +679,6 @@
           (list txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt)
           (list tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt)
           (list lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt) 
-          (list btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt)        
         )
       )
 
@@ -812,28 +689,25 @@
   )
 )
 
-(define-public (claim-rewards-and-principal-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
+(define-public (claim-rewards-and-principal-at-cycle (rewardCycle uint) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>))
     (let (
             (claimer tx-sender)
             (token-x (contract-of token-x-trait))
             (token-y (contract-of token-y-trait))
-            (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+            (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
             (fee-balance-x (get fee-balance-x pair))
             (fee-balance-y (get fee-balance-y pair))
             (this-cycle (unwrap-panic (get-current-cycle))) ;; cycle when calling function
             (userStakingData (get-lp-staked-by-user-at-cycle token-x token-y rewardCycle tx-sender))
-            (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender rewardCycle))
 
 
-            (rewards-and-principal-to-claim (unwrap-panic (get-rewards-at-cycle rewardCycle tx-sender token-x-trait token-y-trait lp-token-trait xbtc-token-trait)))
+            (rewards-and-principal-to-claim (unwrap-panic (get-rewards-at-cycle rewardCycle tx-sender token-x-trait token-y-trait lp-token-trait)))
             (user-x-rewards (unwrap! (element-at rewards-and-principal-to-claim u0) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
             (user-y-rewards (unwrap! (element-at rewards-and-principal-to-claim u1) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
             (lp-claim (unwrap! (element-at rewards-and-principal-to-claim u2) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
-            (xbtc-claim (unwrap! (element-at rewards-and-principal-to-claim u3) CALCULATING_REWARDS_AND_PRINCIPAL_ERR))
-
 
             (claimed (get reward-claimed userStakingData))
-            ;;   ;; only set claimed-updated to true if the x-rewards or y-rewards were > u0. this way user can claim principal in one txn, and rewards in another if needed.
+            ;; only set claimed-updated to true if the x-rewards or y-rewards were > u0. this way user can claim principal in one txn, and rewards in another if needed.
             (claimed-updated 
                 (if claimed 
                     true 
@@ -841,7 +715,6 @@
                 )
             )
 
-            (userBitflowEscrowDataUpdated (merge userBitflowEscrowData {xbtc-to-claim: u0}))
             (userStakingDataUpdated (merge userStakingData {reward-claimed: claimed-updated, lp-to-claim: u0}))
 
             (pair-updated
@@ -863,9 +736,7 @@
         ;;   (print {user-amt-lp: user-amount-staked, total-amt-lp: total-amount-staked, uxr: user-x-rewards, uyr: user-y-rewards, txr: total-x-rewards, tyr: total-y-rewards})
         (asserts! (is-eq claimed false) ALREADY_CLAIMED_ERR)
         (asserts! (>= this-cycle rewardCycle) CLAIM_TOO_EARLY_ERR)
-        (if (> user-x-rewards u0) 
-            ;; (asserts! (is-ok (as-contract (contract-call? token-x-trait transfer user-x-rewards contract-address sender none))) TRANSFER_X_FAILED_ERR)
-            
+        (if (> user-x-rewards u0)             
             (asserts! (is-ok (as-contract (contract-call? .fee-escrow-v3 claim-token-rewards-from-escrow token-x-trait claimer user-x-rewards))) TRANSFER_X_FAILED_ERR)
             (asserts! (is-ok (ok true)) (err u123412341))
         )
@@ -879,11 +750,7 @@
             (asserts! (is-ok (ok true)) (err u123412343))
         )
         
-        (if (> xbtc-claim u0) 
-            (asserts! (is-ok (as-contract (contract-call? xbtc-token-trait transfer xbtc-claim CONTRACT_ADDRESS claimer none))) TRANSFER_LP_FAILED_ERR)
-            (asserts! (is-ok (ok true)) (err u123412344))
-        )
-        (map-set pairs-data-map { token-x: token-x, token-y: token-y } pair-updated)
+        (map-set PairsDataMap { token-x: token-x, token-y: token-y } pair-updated)
         (map-set UserStakingData
             {
             token-x: token-x,
@@ -893,26 +760,19 @@
             }
             userStakingDataUpdated
         )
-        (map-set UserBitflowEscrow
-            {
-            who: claimer,
-            cycle: rewardCycle
-            }
-            userBitflowEscrowDataUpdated
+
         )
-        )
-        (ok (list user-x-rewards user-y-rewards lp-claim xbtc-claim))
+        (ok (list user-x-rewards user-y-rewards lp-claim))
     )
 )
 
-(define-read-only (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>)) 
-  ;; todo: traits as inputs isn't secure for lp-token and xbtc. need to ensure can't be abused / find diff way to call in transfer function.
-  ;; what happens if staking 50 btc for x cycles, and then 50 more for x cycles starting at x+1 (cycle following prev lockup). can't claim xbtc or lptokens using current logic.
+(define-read-only (get-rewards-at-cycle (rewardCycle uint) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>))
+  ;; todo: traits as inputs isn't secure for lp-token. need to ensure can't be abused / find diff way to call in transfer function.
   (let 
     (
       (token-x (contract-of token-x-trait))
       (token-y (contract-of token-y-trait))
-      (pair (unwrap! (map-get? pairs-data-map { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
+      (pair (unwrap! (map-get? PairsDataMap { token-x: token-x, token-y: token-y }) INVALID_PAIR_ERR))
       (fee-balance-x (get fee-balance-x pair))
       (fee-balance-y (get fee-balance-y pair))
       (cycleFeeData (get-total-cycle-fees token-x token-y rewardCycle))
@@ -936,41 +796,8 @@
       (claimer who)
       (this-cycle (unwrap-panic (get-current-cycle))) ;; cycle when calling function
       (reward-cycle rewardCycle) ;; cycle claiming rewards from
-      (following-cycle (+ u1 reward-cycle)) ;; cycle after the one claiming rewards from
-      (user-lp-staked-following-cycle (get lp-staked (get-lp-staked-by-user-at-cycle token-x token-y following-cycle who)))
       (lp-claim (get lp-to-claim userStakingData))
 
-    ;;   (lp-claim
-    ;;     (if (> user-amount-staked user-lp-staked-following-cycle)
-    ;;           (- user-amount-staked user-lp-staked-following-cycle)
-    ;;           u0
-    ;;           ))
-      (userBitflowEscrowData (get-user-xbtc-escrowed-at-cycle tx-sender reward-cycle))
-      (user-xbtc-escrowed (get amount userBitflowEscrowData))     
-      (xbtc-claim (get xbtc-to-claim userBitflowEscrowData))
-
-    ;;   (user-xbtc-escrowed-following-cycle (get amount (get-user-xbtc-escrowed-at-cycle who following-cycle)))
-    ;;   (xbtc-claim
-    ;;     (if (> user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-    ;;           (- user-xbtc-escrowed user-xbtc-escrowed-following-cycle)
-    ;;           u0
-    ;;     )
-    ;;   )
-
-      (is-lp (> user-amount-staked u0))
-      (uses-bitflow-escrow (> user-xbtc-escrowed u0))
-      (is-both (and is-lp uses-bitflow-escrow))
-      (available-bps FEE_ON_SWAPS) ;; 5 for lps and xbtc escrow'ers. 1 for foundation.
-      (earned-bps (if is-both
-                      u5 
-                      (if is-lp 
-                        u3 
-                        (if uses-bitflow-escrow
-                          u1 
-                          u0)))
-      )
-      (user-x-rewards-proportional (/ (* earned-bps user-x-rewards ) available-bps))
-      (user-y-rewards-proportional (/ (* earned-bps user-y-rewards ) available-bps))
       (is-future-cycle (> rewardCycle this-cycle))
       (is-current-cycle (is-eq rewardCycle this-cycle))
       (is-past-cycle (< rewardCycle this-cycle))
@@ -980,37 +807,35 @@
     (if (or (is-eq claimed true) is-future-cycle)  
       (ok (list u0 u0 u0 u0))
       (if is-current-cycle 
-        (ok (list u0 u0 lp-claim xbtc-claim)) ;; can't claim rewards from current cycle, only principal
-        (ok (list user-x-rewards-proportional user-y-rewards-proportional lp-claim xbtc-claim)) ;; must be a past cycle
+        (ok (list u0 u0 lp-claim)) ;; can't claim rewards from current cycle, only principal
+        (ok (list user-x-rewards user-y-rewards lp-claim)) ;; must be a past cycle
       )
     )
   )
 ) 
 
-(define-private (get-user-reward-data (cycle uint) (pool-info {who: principal, token-x-trait: <sip-010-trait>, token-y-trait: <sip-010-trait>, lp-token-trait: <sip-010-trait>, xbtc-token-trait: <sip-010-trait>}))
+(define-private (get-user-reward-data (cycle uint) (pool-info {who: principal, token-x-trait: <sip-010-trait>, token-y-trait: <sip-010-trait>, lp-token-trait: <bitflow-lp-trait>}))
   (let (
     (who (get who pool-info))
     (txt (get token-x-trait pool-info))
     (tyt (get token-y-trait pool-info))
     (lptt (get lp-token-trait pool-info))
-    (xbtctt (get xbtc-token-trait pool-info))
-    (reward-list (get-rewards-at-cycle cycle who txt tyt lptt xbtctt))
+    (reward-list (get-rewards-at-cycle cycle who txt tyt lptt))
 
 
     ) 
-    (if (is-ok (get-rewards-at-cycle cycle who txt tyt lptt xbtctt))
+    (if (is-ok (get-rewards-at-cycle cycle who txt tyt lptt))
       pool-info
-      pool-info ;; should return something else here to showcase that stake-lp-at-cycle threw an error
+      pool-info ;; should return something else here to showcase that get-rewards-at-cycle threw an error
     )
   )
 )
 
-(define-read-only (get-rewards-and-principal-many-cycles (list-of-cycles (list 1000 uint)) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (xbtc-token-trait <sip-010-trait>))
+(define-read-only (get-rewards-and-principal-many-cycles (list-of-cycles (list 1000 uint)) (who principal) (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>))
     (let (
       (txt token-x-trait)
       (tyt token-y-trait)
       (lpt lp-token-trait)
-      (btt xbtc-token-trait)
       (list-of-cycle-rewards 
         (map 
           get-rewards-at-cycle
@@ -1019,7 +844,6 @@
           (list txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt txt)
           (list tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt tyt)
           (list lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt lpt) 
-          (list btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt btt)        
         )
       )
 
@@ -1050,22 +874,13 @@
       (old_x (unwrap! (element-at old_balances u0) (err u13)))
       (old_y (unwrap! (element-at old_balances u1) (err u14)))
       (x (+ old_x dxlf))
-      ;; (x (+ old_x dx))
       (y (get-y x old_x old_y))
       (dy (- old_y y))
-      ;; (dy (get-y x old_x old_y))
-      ;; (y (- old_y dy))
  
       (price (/ (* u100 dy) dx))
       
 
       )
-      ;; (begin
-      ;;   (asserts! (not (is-eq txt tyt)) INVALID_PAIR_ERR) ;; prevents swapping for same token
-      ;;   ;; (print old_balances)
-      ;;   ;; (ok (list x old_x y old_y))
-      ;;   (ok )
-      ;; )
       (print price)
       (ok dy)
     )
@@ -1125,12 +940,6 @@
       (new_y_denominator (- (+ (* u2 y) b) D)) ;; (2 * y + b - D)
       (new_y (/ new_y_numerator new_y_denominator))
       
-      ;; (y-info-updated 
-      ;;   (merge y-info {
-      ;;     y-prev: y,
-      ;;     y: new_y
-      ;;   })
-      ;; )
       (bigger-y (> new_y y))
       (small-diff (is-eq new_y y)) ;;y - y-prev <= 1, but dealing w/ uint so checking if equal. runtime error if y = u0 OR (2 * y + b - D) < 0
       ;; (converged (or bigger-y small-diff))
@@ -1305,16 +1114,17 @@
 ;; should be subject to a governance vote
 ;; for now, only contract owner can do this
 ;; should only be allowed to set to true? what if gov wants to vote on stopping a trading pair?
-(define-public (set-pair-approval (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (tradeable bool))
+(define-public (set-pair-approval (token-x-trait <sip-010-trait>) (token-y-trait <sip-010-trait>) (lp-token-trait <bitflow-lp-trait>) (tradeable bool))
   (let (
     (x-contract (contract-of token-x-trait))
     (y-contract (contract-of token-y-trait))
+    (lp-token-contract (contract-of lp-token-trait))
     (who tx-sender)
     ) 
     (begin 
       (asserts! (is-eq who CONTRACT_OWNER) UNAUTHORIZED_PAIR_ADJUSTMENT)
       (map-set ApprovedPairs 
-        {token-x-contract: x-contract, token-y-contract: y-contract}
+        {token-x-contract: x-contract, token-y-contract: y-contract, lp-token-contract: lp-token-contract}
         {approval: tradeable}
       )
       (ok tradeable)
