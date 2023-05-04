@@ -155,11 +155,11 @@
 
 ;; Get D
 (define-read-only (get-D (x-bal uint) (y-bal uint) (ann uint))
-    (get D (fold D-for-loop d-loop-index-list {D: (+ x-bal y-bal), x-bal: x-bal, y-bal: y-bal, ann: ann}))
+    (get converged (fold D-for-loop d-loop-index-list {D: (+ x-bal y-bal), x-bal: x-bal, y-bal: y-bal, ann: ann, converged: u0}))
 )
 
 ;; Get D Helper
-(define-read-only (D-for-loop (n uint) (D-info {D: uint, x-bal: uint, y-bal: uint, ann: uint})) 
+(define-private (D-for-loop (n uint) (D-info {D: uint, x-bal: uint, y-bal: uint, ann: uint, converged: uint})) 
     (let 
         (
             ;; Grabbing everything from D-info
@@ -169,6 +169,7 @@
             (current-y-bal (get y-bal D-info))
             (current-S (+ current-x-bal current-y-bal))
             (current-ann (get ann D-info))
+            (current-converged (get converged D-info))
 
             ;; Start logic for calculating new D
             ;; Calculate new partial D with respect to x
@@ -183,22 +184,15 @@
             
         )
 
-        ;; Check if new D is > current D
-        (if (> new-D current-D)
-            ;; new-D is larger than D, check if the difference is less than 10
-            (if (<= (- new-D current-D) u10)
-                ;; difference is less than 10, converged, return new D
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann}
-                ;; difference is greater than 10, update D-info & run again
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann}
+        ;; Check if converged value / new D was already found
+        (if (is-eq current-converged u0)
+            ;; Converged value was not found, check if new D is > current D
+            (if (or (<= (- new-D current-D) u10) (<= (- current-D new-D) u10))
+                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
+                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
             )
-            ;; new-D is smaller than D, check if the difference is less than 10
-            (if (<= (- current-D new-D) u10)
-                ;; difference is less than 10, converged, return new D
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann}
-                ;; difference is greater than 10, update D-info & run again
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann}
-            )
+            ;; Converged was already found, return D-info
+            D-info
         )
     )
 )
