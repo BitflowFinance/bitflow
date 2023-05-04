@@ -1,5 +1,5 @@
 
-import { Clarinet, Tx, Chain, Account, types } from 'https://deno.land/x/clarinet@v1.5.3/index.ts';
+import { Clarinet, Tx, Chain, Account, types } from 'https://deno.land/x/clarinet@v1.5.4/index.ts';
 import { assertEquals } from 'https://deno.land/std@0.170.0/testing/asserts.ts';
 
 Clarinet.test({

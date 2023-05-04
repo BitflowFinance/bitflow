@@ -6,7 +6,7 @@ deployment_fee_rate = 10
 mnemonic = "twice kind fence tip hidden tilt action fragile skin nothing glory cousin green tomorrow spring wrist shed math olympic multiply hip blue scout claw"
 balance = 100_000_000_000_000
 # secret_key: 753b7cc01a1a2e86221266a154af739463fce51219d97e4f856cd7200c3bd2a601
-stx_address = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
+# stx_address: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
 # btc_address: mqVnk6NPRdhntvfm4hh9vvjiRkFDUuSYsH
 
 [accounts.wallet_1]
@@ -75,10 +75,11 @@ balance = 100_000_000_000_000
 [devnet]
 disable_stacks_explorer = false
 disable_stacks_api = false
+# disable_subnet_api = false
 # disable_bitcoin_explorer = true
 # working_dir = "tmp/devnet"
 # stacks_node_events_observers = ["host.docker.internal:8002"]
-# miner_mnemonic = "twice kind fence tip hidden tilt action fragile skin nothing glory cousin green tomorrow spring wrist shed math olympic multiply hip blue scout claw"
+# miner_mnemonic = "fragile loan twenty basic net assault jazz absorb diet talk art shock innocent float punch travel gadget embrace caught blossom hockey surround initial reduce"
 # miner_derivation_path = "m/44'/5757'/0'/0/0"
 # faucet_mnemonic = "shadow private easily thought say logic fault paddle word top book during ignore notable orange flight clock image wealth health outside kitten belt reform"
 # faucet_derivation_path = "m/44'/5757'/0'/0/0"
@@ -98,20 +99,29 @@ disable_stacks_api = false
 # postgres_username = "postgres"
 # postgres_password = "postgres"
 # postgres_database = "postgres"
-# bitcoin_node_image_url = "quay.io/hirosystems/bitcoind:devnet-v2"
-# stacks_node_image_url = "localhost:5000/stacks-node:devnet-v2"
+# bitcoin_node_image_url = "quay.io/hirosystems/bitcoind:devnet-v3"
+# stacks_node_image_url = "quay.io/hirosystems/stacks-node:devnet-v3"
 # stacks_api_image_url = "hirosystems/stacks-blockchain-api:latest"
 # stacks_explorer_image_url = "hirosystems/explorer:latest"
 # bitcoin_explorer_image_url = "quay.io/hirosystems/bitcoin-explorer:devnet"
-# postgres_image_url = "postgres:alpine"
-# enable_hyperchain_node = true
-# hyperchain_image_url = "hirosystems/hyperchains:103-merge-stretch"
-# hyperchain_leader_mnemonic = "twice kind fence tip hidden tilt action fragile skin nothing glory cousin green tomorrow spring wrist shed math olympic multiply hip blue scout claw"
-# hyperchain_leader_derivation_path = "m/44'/5757'/0'/0/0"
-# hyperchain_node_rpc_port = 30443
-# hyperchain_node_p2p_port = 30444
-# hyperchain_events_ingestion_port = 30445
-# hyperchain_node_events_observers = ["host.docker.internal:8002"]
+# postgres_image_url = "postgres:14"
+# enable_subnet_node = true
+# subnet_node_image_url = "hirosystems/stacks-subnets:0.4.0"
+# subnet_leader_mnemonic = "twice kind fence tip hidden tilt action fragile skin nothing glory cousin green tomorrow spring wrist shed math olympic multiply hip blue scout claw"
+# subnet_leader_derivation_path = "m/44'/5757'/0'/0/0"
+# subnet_contract_id = "ST13F481SBR0R7Z6NMMH8YV2FJJYXA5JPA0AD3HP9.subnet-v1-1"
+# subnet_node_rpc_port = 30443
+# subnet_node_p2p_port = 30444
+# subnet_events_ingestion_port = 30445
+# subnet_node_events_observers = ["host.docker.internal:8002"]
+# subnet_api_image_url = "hirosystems/stacks-blockchain-api:7.1.0-beta.2"
+# subnet_api_postgres_database = "subnet_api"
+
+# For testing in epoch 2.1 / using Clarity2
+# epoch_2_0 = 100
+# epoch_2_05 = 102
+# epoch_2_1 = 106
+# pox_2_activation = 109
 
 
 # Send some stacking orders

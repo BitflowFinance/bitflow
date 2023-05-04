@@ -1,17 +1,6 @@
+;; sip-010-trait-ft-standard
 
-;; title: bitflow-sip-010
-;; version:
-;; summary:
-;; description:
-
-
-;; bitflow-lp-trait
-
-
-;; this is an SIP-010 method with an additional functions used by swapr
-;; as Clarity does not support "includes", copy the needed functions, and add new ones
-
-(define-trait bitflow-lp-trait
+(define-trait sip-010-trait
   (
     ;; Transfer from the caller to a new principal
     (transfer (uint principal principal (optional (buff 34))) (response bool uint))
@@ -33,23 +22,5 @@
 
     ;; an optional URI that represents metadata of this token
     (get-token-uri () (response (optional (string-utf8 256)) uint))
-
-    ;; additional functions specific to swapr
-
-    ;; mint function only bitflow contract can call
-    (mint (principal uint) (response bool uint))
-
-    ;; burn function only bitflow contract can call
-    (burn (principal uint) (response bool uint))
-
-    ;;
-    ;; (get-data (principal) (response {
-    ;;   name: (string-ascii 32),
-    ;;   symbol: (string-ascii 32),
-    ;;   decimals: uint,
-    ;;   uri: (optional (string-utf8 256)),
-    ;;   supply: uint,
-    ;;   balance: uint,
-    ;; } uint))
   )
 )
