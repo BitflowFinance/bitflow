@@ -743,6 +743,26 @@
 )
 
 ;; Add Admin
+;; @desc: Adds an admin to the admins var list
+;; @params: admin: principal
+(define-public (add-admin (admin principal))
+    (let 
+        (
+            (current-admins (var-get admins))
+            ;;(new-admins (unwrap! (as-max-len? (append current-admins admin) u5) ("err-add-admin-overflow")))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Assert that admin is not already an admin using is-none & index-of with the admins var
+        (asserts! (is-none (index-of current-admins admin)) (err "err-already-admin"))
+
+        ;; Update all appropriate maps
+        (ok (var-set admins (unwrap! (as-max-len? (append current-admins admin) u5) (err "err-admin-overflow"))))
+    )
+)
+
 ;; Remove Admin
 ;; Change Swap Fee
 ;; Change Liquidity Fee
