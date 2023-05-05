@@ -1,6 +1,8 @@
 ;; Stableswap Core Contract
 ;; This contract handles the core logic of the Stableswap protocol.
 ;; The initial trading pair is sUSDT/USDA
+;; USDA is 6 decimals
+;; sUSDT is 8 decimals
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,6 +64,8 @@
 (define-map PairsDataMap {x-token: principal, y-token: principal, lp-token: principal} {
     approval: bool,
     total-shares: uint,
+    x-decimals: uint,
+    y-decimals: uint,
     balance-x: uint,
     balance-y: uint,
     fee-balance-x: uint,
@@ -167,9 +171,8 @@
     )
 )
 
-;; Get DX
-
 ;; Get Y
+;; Maybe move into get-dy?
 (define-read-only (get-y (x-bal uint) (y-bal uint) (x-amount uint) (ann uint))
     (let 
         (
@@ -306,7 +309,59 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Create Pair
+;; @desc: Creates a new pair for trading
+;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint, pair-name: string, x-balance: uint, y-balance: uint
+;; initial-balance param is for TOTAL balance of x + y tokens (aka 2x or 2y or (x + y))
+(define-public (create-pair (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
+    (let 
+        (
+            (test true)
+            (lp-owner tx-sender)
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of (var-get admins) tx-sender )) (err "err-not-admin"))
+
+        ;; Assert using and that the pair does not already exist using is-none & map-get?
+        (asserts! (and 
+            (is-none (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}))
+            (is-none (map-get? PairsDataMap {x-token: (contract-of y-token), y-token: (contract-of x-token), lp-token: (contract-of lp-token)}))
+        )  (err "err-pair-xy-or-yx-exists"))
+
+        ;; Assert that both initial balances are greater than 0
+        (asserts! (or (> initial-x-bal u0) (> initial-y-bal u0)) (err "err-initial-bal-zero"))
+
+        ;; Assert that x & y tokens are the same
+        (asserts! (is-eq initial-x-bal initial-y-bal) (err "err-initial-bal-odd"))
+
+        ;; Mint LP tokens to tx-sender
+        (unwrap! (as-contract (contract-call? .usda-susdt-lp-token mint lp-owner (+ initial-x-bal initial-y-bal))) (err "err-minting-lp-tokens"))
+
+        ;; Transfer token x liquidity to this contract
+        (unwrap! (contract-call? x-token transfer initial-x-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-x"))
+
+        ;; Transfer token y liquidity to this contract
+        (unwrap! (contract-call? y-token transfer initial-y-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-y"))
+
+        ;; Update all appropriate maps
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
+            approval: true,
+            total-shares: (+ initial-x-bal initial-y-bal),
+            x-decimals: (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")),
+            y-decimals: (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")),
+            balance-x: initial-x-bal,
+            balance-y: initial-y-bal,
+            fee-balance-x: u0,
+            fee-balance-y: u0,
+            d: (+ initial-x-bal initial-y-bal),
+            amplification-coefficient: amplification-coefficient,
+        }))
+    )
+)
+
+
 ;; Setting Pair Approval
+
 ;; Set A
 ;; Add Admin
 ;; Remove Admin
