@@ -166,10 +166,8 @@
             (updated-x-balance (+ current-balance-x (- x-amount x-amount-fee)))
             (new-y (get-y updated-x-balance current-balance-y x-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
             (dy (- current-balance-y new-y))
-            (dy-fee (/ (* dy total-swap-fee) u10000))
-            (dy-net (- dy dy-fee))
         )
-        (ok dy-net)
+        (ok dy)
     )
 )
 
@@ -251,20 +249,20 @@
             
         )
         
+        ;; Check if converged value / new D was already found
         (if (is-eq current-converged u0)
             (if (> new-D  current-D)
                 (if (<= (- new-D current-D) u10)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
+                    {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
                 (if (<= (- current-D new-D) u10)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
-                {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
+                    {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
             )
             {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
         )
-        ;; Check if converged value / new D was already found
     
     )
 )
