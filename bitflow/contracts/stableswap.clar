@@ -446,6 +446,7 @@
 (define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint))
     (let 
         (
+            ;; Grabbing all data from PairsDataMap
             (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
             (current-balance-x (get balance-x current-pair))
@@ -454,9 +455,20 @@
             (new-balance-y (+ current-balance-y y-amount-added))
             (current-total-shares (get total-shares current-pair))
             (current-amplification-coefficient (get amplification-coefficient current-pair))
-            ;;(current-d (get d current-pair))
+            
+            ;; Calculating the ideal balance
             (d0 (get-D current-balance-x current-balance-y current-amplification-coefficient))
             (d1 (get-D new-balance-x new-balance-y current-amplification-coefficient))
+            (ideal-balance-x (/ (* d1 current-balance-x) d0))
+            (ideal-balance-y (/ (* d1 current-balance-y) d0))
+            (x-difference (if (> ideal-balance-x new-balance-x) (- ideal-balance-x new-balance-x) (- new-balance-x ideal-balance-x)))
+            (y-difference (if (> ideal-balance-y new-balance-y) (- ideal-balance-y new-balance-y) (- new-balance-y ideal-balance-y)))
+            ;; Applying fees for imbalanced liquidity
+            (x-fee (/ (* x-difference (var-get liquidity-fees)) u10000))
+            (y-fee (/ (* y-difference (var-get liquidity-fees)) u10000))
+            (post-fee-balance-x (- new-balance-x x-fee))
+            (post-fee-balance-y (- new-balance-y y-fee))
+            (d2 (get-D post-fee-balance-x post-fee-balance-y current-amplification-coefficient))
             (liquidity-provider tx-sender)
         )
 
@@ -466,11 +478,11 @@
         ;; Assert that either x-amount-added or y-amount-added is greater than 0
         (asserts! (or (> x-amount-added u0) (> y-amount-added u0)) (err "err-x-or-y-amount-added-zero"))
 
-        ;; Assert that d1 is greater than d0
-        (asserts! (> d1 d0) (err "err-d1-less-than-d0"))
+        ;; Assert that d2 is greater than d0
+        (asserts! (> d2 d0) (err "err-d2-less-than-d0"))
 
         ;; Assert that derived mint amount is greater than 0
-        (asserts! (> (/ (* current-total-shares (- d1 d0)) d0) u0) (err "err-derived-mint-amount-zero"))
+        (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) u0) (err "err-derived-mint-amount-zero"))
 
         ;; Check which token(s) need to be sent
         (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
@@ -503,7 +515,7 @@
             {
                 balance-x: new-balance-x,
                 balance-y: new-balance-y,
-                total-shares: (+ current-total-shares (/ (* current-total-shares (- d1 d0)) d0))
+                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
             }
         )))
     )
