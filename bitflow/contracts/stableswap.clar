@@ -11,6 +11,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait lp-trait .lp-trait.lp-trait)
 
 ;;;;;;;;;;;;;;;
 ;; Constants ;;
@@ -101,17 +102,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Get pair data
-(define-read-only (get-pair-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>)) 
+(define-read-only (get-pair-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>)) 
     (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
 )
 
 ;; Get cycle data
-(define-read-only (get-cycle-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycle-num uint)) 
+(define-read-only (get-cycle-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle-num uint)) 
     (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: cycle-num})
 )
 
 ;; Get user data
-(define-read-only (get-user-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (user principal)) 
+(define-read-only (get-user-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (user principal)) 
     (map-get? UserDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: user})
 )
 
@@ -126,7 +127,7 @@
 )
 
 ;; Get any cycle rewards; maybe -and-claimable-lpt 
-(define-read-only (get-cycle-rewards (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycle uint)) 
+(define-read-only (get-cycle-rewards (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle uint)) 
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -157,7 +158,7 @@
 ;; (define-read-only (get-cycle-rewards) body)
 
 ;; Get DY
-(define-read-only (get-dy (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (x-amount uint))
+(define-read-only (get-dy (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint))
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -282,7 +283,7 @@
 ;; Swap X -> Y
 ;; @desc: Swaps X token for Y token
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount: uint, min-y-amount: uint
-(define-public (swap-x-for-y (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (x-amount uint) (min-y-amount uint)) 
+(define-public (swap-x-for-y (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -358,7 +359,7 @@
 ;; Swap Y -> X
 ;; @desc: Swaps Y token for X token
 ;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
-(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <sip-010-trait>) (y-amount uint) (min-x-amount uint)) 
+(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -442,7 +443,7 @@
 ;; Add Liquidity
 ;; @desc: Adds liquidity to a pair, mints the appropriate amount of LP tokens
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
-(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (x-amount-added uint) (y-amount-added uint))
+(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint))
     (let 
         (
             (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -468,6 +469,9 @@
         ;; Assert that d1 is greater than d0
         (asserts! (> d1 d0) (err "err-d1-less-than-d0"))
 
+        ;; Assert that derived mint amount is greater than 0
+        (asserts! (> (/ (* current-total-shares (- d1 d0)) d0) u0) (err "err-derived-mint-amount-zero"))
+
         ;; Check which token(s) need to be sent
         (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
             ;; Check which is non-zero
@@ -490,10 +494,18 @@
         )
 
         ;; Mint LP tokens to tx-sender
-        (unwrap! (as-contract (contract-call? lp-token mint (/ (* current-total-shares (- d1 d0)) d0) tx-sender liquidity-provider none)) (err "err-minting-lp-tokens"))
+        (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d1 d0)) d0))) (err "err-minting-lp-tokens"))
 
-        (ok true)
-
+        ;; Update all appropriate maps
+        ;; Update PairsDataMap
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair 
+            {
+                balance-x: new-balance-x,
+                balance-y: new-balance-y,
+                total-shares: (+ current-total-shares (/ (* current-total-shares (- d1 d0)) d0))
+            }
+        )))
     )
 )
 
@@ -580,7 +592,7 @@
 ;; @desc: Creates a new pair for trading
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint, pair-name: string, x-balance: uint, y-balance: uint
 ;; initial-balance param is for TOTAL balance of x + y tokens (aka 2x or 2y or (x + y))
-(define-public (create-pair (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
+(define-public (create-pair (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
     (let 
         (
             (test true)
@@ -631,7 +643,7 @@
 ;; Setting Pair Approval
 ;; @desc: Sets the approval of a pair
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, approval: bool
-(define-public (set-pair-approval (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (approval bool))
+(define-public (set-pair-approval (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (approval bool))
     (let 
         (
             (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
