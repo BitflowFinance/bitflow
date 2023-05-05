@@ -37,6 +37,9 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
+;; Test Protocol Address
+(define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
+
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -173,6 +176,54 @@
     )
 )
 
+;; Get X
+;; Maybe move into get-dx?
+(define-read-only (get-x (y-bal uint) (x-bal uint) (y-amount uint) (ann uint))
+    (let 
+        (
+            (y-bal-new (+ y-bal y-amount))
+            (current-D (get-D x-bal y-bal ann))
+            (c0 current-D)
+            (c1 (/ (* c0 current-D) (* number-of-tokens y-bal-new)))
+            (c2 (/ (* c1 current-D) (* ann number-of-tokens)))
+            (b (+ y-bal-new (/ current-D ann)))
+        )
+        (get converged (fold x-for-loop index-list {x: current-D, c: c2, b: b, D: current-D, converged: u0}))
+    )
+)
+
+;; Get X Helper
+(define-private (x-for-loop (n uint) (x-info {x: uint, c: uint, b: uint, D: uint, converged: uint})) 
+    (let
+        (
+            (current-x (get x x-info))
+            (current-c (get c x-info))
+            (current-b (get b x-info))
+            (current-D (get D x-info))
+            (current-converged (get converged x-info))
+            (x-numerator (+ (* current-x current-x) current-c))
+            (x-denominator (- (+ (* u2 current-x) current-b) current-D))
+            (new-x (/ x-numerator x-denominator))
+        )
+
+        (if (is-eq current-converged u0)
+            (if (> new-x  current-x)
+                (if (<= (- new-x current-x) test-constant)
+                    {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
+                    {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
+                )
+                (if (<= (- current-x new-x) test-constant)
+                    {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
+                    {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
+                )
+            )
+            x-info
+        )
+
+
+    )
+)
+
 ;; Get Y
 ;; Maybe move into get-dy?
 (define-read-only (get-y (x-bal uint) (y-bal uint) (x-amount uint) (ann uint))
@@ -220,6 +271,254 @@
     )
 )
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;
+;;; Swap Functions ;;;
+;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+;; Swap X -> Y
+;; @desc: Swaps X token for Y token
+;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount: uint, min-y-amount: uint
+(define-public (swap-x-for-y (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (x-amount uint) (min-y-amount uint)) 
+    (let 
+        (
+            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-approval (get approval pair-data))
+            (current-balance-x (get balance-x pair-data))
+            (current-balance-y (get balance-y pair-data))
+            (swap-fee-lps (get lps (var-get swap-fees)))
+            (x-amount-fee-lps (/ (* x-amount swap-fee-lps) u10000))
+            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (x-amount-fee-protocol (/ (* x-amount swap-fee-protocol) u10000))
+            (x-amount-fee-total (+ swap-fee-lps swap-fee-protocol))
+            (updated-x-amount (- x-amount x-amount-fee-total))
+            (updated-x-balance (+ current-balance-x updated-x-amount))
+            (new-y (get-y updated-x-balance current-balance-y updated-x-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (dy (- current-balance-y new-y))
+            (swapper tx-sender)
+        )
+
+        ;; Assert that pair is approved
+        (asserts! current-approval (err "err-pair-not-approved"))
+
+        ;; Assert that x-amount is less than x10 of current-balance-x
+        (asserts! (< x-amount (* u10 current-balance-x)) (err "err-x-amount-too-high"))
+
+        ;; Assert that dy is greater than min-y-amount
+        (asserts! (> dy min-y-amount) (err "err-min-y-amount"))
+
+        ;; Transfer updated-x-balance tokens from tx-sender to this contract
+        (unwrap! (contract-call? x-token transfer updated-x-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-x"))
+
+        ;; Transfer x-amount-fee-lps tokens from tx-sender to fee-escrow-contract
+        (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper fee-escrow-contract none) (err "err-transferring-token-x-fee"))
+
+        ;; Transfer x-amount-fee-protocol tokens from tx-sender to protocol-address
+        (unwrap! (contract-call? x-token transfer x-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-x-fee-protocol"))
+
+        ;; Transfer dy tokens from this contract to tx-sender
+        (unwrap! (as-contract (contract-call? y-token transfer dy tx-sender swapper none)) (err "err-transferring-token-y"))
+
+        ;; Update all appropriate maps
+        ;; Update PairsDataMap
+        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            pair-data 
+            {
+                balance-x: updated-x-balance,
+                balance-y: new-y,
+                fee-balance-x: (+ (get fee-balance-x pair-data) x-amount-fee-lps)            
+            }
+        ))
+
+        ;; Match if map-get? returns some for CycleDataMap
+        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+            cycle-data
+                ;; Update CycleDataMap
+                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
+                    cycle-data 
+                    {
+                        cycle-fee-balance-x: (+ (get cycle-fee-balance-x cycle-data) x-amount-fee-lps)
+                    }
+                ))
+                ;; Create new CycleDataMap
+                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
+                    cycle-fee-balance-x: x-amount-fee-lps,
+                    cycle-fee-balance-y: u0,
+                    total-lp-token-staked: u0
+                })
+            
+        ))
+
+    )
+)
+
+;; Swap Y -> X
+;; @desc: Swaps Y token for X token
+;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
+(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <sip-010-trait>) (y-amount uint) (min-x-amount uint)) 
+    (let 
+        (
+            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-approval (get approval pair-data))
+            (current-balance-x (get balance-x pair-data))
+            (current-balance-y (get balance-y pair-data))
+            (swap-fee-lps (get lps (var-get swap-fees)))
+            (y-amount-fee-lps (/ (* y-amount swap-fee-lps) u10000))
+            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (y-amount-fee-protocol (/ (* y-amount swap-fee-protocol) u10000))
+            (y-amount-fee-total (+ swap-fee-lps swap-fee-protocol))
+            (updated-y-amount (- y-amount y-amount-fee-total))
+            (updated-y-balance (+ current-balance-y updated-y-amount))
+            (new-x (get-x updated-y-balance current-balance-x updated-y-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (dx (- current-balance-x new-x))
+            (swapper tx-sender)
+        )
+
+        ;; Assert that pair is approved
+        (asserts! current-approval (err "err-pair-not-approved"))
+
+        ;; Assert that y-amount is less than x10 of current-balance-y
+        (asserts! (< y-amount (* u10 current-balance-y)) (err "err-y-amount-too-high"))
+
+        ;; Assert that dx is greater than min-x-amount
+        (asserts! (> dx min-x-amount) (err "err-min-x-amount"))
+
+        ;; Transfer updated-y-balance tokens from tx-sender to this contract
+        (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y-updated-amount"))
+
+        ;; Transfer y-amount-fee-lps tokens from tx-sender to fee-escrow-contract
+        (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper fee-escrow-contract none) (err "err-transferring-token-y-swap-fee"))
+
+        ;; Transfer y-amount-fee-protocol tokens from tx-sender to protocol-address
+        (unwrap! (contract-call? y-token transfer y-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-y-protocol-fee"))
+
+        ;; Transfer dx tokens from this contract to tx-sender
+        (unwrap! (as-contract (contract-call? x-token transfer dx tx-sender swapper none)) (err "err-transferring-token-x"))
+
+        ;; Update all appropriate maps
+        ;; Update PairsDataMap
+        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            pair-data 
+            {
+                balance-x: new-x,
+                balance-y: updated-y-balance,
+                fee-balance-y: (+ (get fee-balance-y pair-data) y-amount-fee-lps)            
+            }
+        ))
+
+        ;; Match if map-get? returns some for CycleDataMap
+        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+            cycle-data
+                ;; Update CycleDataMap
+                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
+                    cycle-data 
+                    {
+                        cycle-fee-balance-y: (+ (get cycle-fee-balance-y cycle-data) y-amount-fee-lps)
+                    }
+                ))
+                ;; Create new CycleDataMap
+                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
+                    cycle-fee-balance-x: u0,
+                    cycle-fee-balance-y: y-amount-fee-lps,
+                    total-lp-token-staked: u0
+                })
+            
+        ))
+
+    )
+)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Liquidity Functions ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Add Liquidity
+;; @desc: Adds liquidity to a pair, mints the appropriate amount of LP tokens
+;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
+(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (x-amount-added uint) (y-amount-added uint))
+    (let 
+        (
+            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-approval (get approval current-pair))
+            (current-balance-x (get balance-x current-pair))
+            (new-balance-x (+ current-balance-x x-amount-added))
+            (current-balance-y (get balance-y current-pair))
+            (new-balance-y (+ current-balance-y y-amount-added))
+            (current-total-shares (get total-shares current-pair))
+            (current-amplification-coefficient (get amplification-coefficient current-pair))
+            ;;(current-d (get d current-pair))
+            (d0 (get-D current-balance-x current-balance-y current-amplification-coefficient))
+            (d1 (get-D new-balance-x new-balance-y current-amplification-coefficient))
+            (liquidity-provider tx-sender)
+        )
+
+        ;; Assert that pair is approved
+        (asserts! current-approval (err "err-pair-not-approved"))
+
+        ;; Assert that either x-amount-added or y-amount-added is greater than 0
+        (asserts! (or (> x-amount-added u0) (> y-amount-added u0)) (err "err-x-or-y-amount-added-zero"))
+
+        ;; Assert that d1 is greater than d0
+        (asserts! (> d1 d0) (err "err-d1-less-than-d0"))
+
+        ;; Check which token(s) need to be sent
+        (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
+            ;; Check which is non-zero
+            (if (is-eq x-amount-added u0)
+                ;; Transfer y-amount-added tokens from tx-sender to this contract
+                (unwrap! (contract-call? y-token transfer y-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))
+                ;; Transfer x-amount-added tokens from tx-sender to this contract
+                (unwrap! (contract-call? x-token transfer x-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x"))
+            )
+            ;; Transfer both x & y tokens to this contract
+            (begin
+                
+                ;; Transfer x-amount-added tokens from tx-sender to this contract
+                (unwrap! (contract-call? x-token transfer x-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x"))
+
+                ;; Transfer y-amount-added tokens from tx-sender to this contract
+                (unwrap! (contract-call? y-token transfer y-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))
+            
+            )
+        )
+
+        ;; Mint LP tokens to tx-sender
+        (unwrap! (as-contract (contract-call? lp-token mint (/ (* current-total-shares (- d1 d0)) d0) tx-sender liquidity-provider none)) (err "err-minting-lp-tokens"))
+
+        (ok true)
+
+    )
+)
+
+;; Withdraw Liquidity
+;; Review math
+
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;
+;;; Stake Functions ;;;
+;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Stake LP Tokens
+;; Unstake / Claim Rewards LP Tokens
+
+
+
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+;;; AMM Functions ;;;
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+
+;; D for loop
 ;; Get D
 (define-read-only (get-D (x-bal uint) (y-bal uint) (ann uint))
     (get converged (fold D-for-loop index-list {D: (+ x-bal y-bal), x-bal: x-bal, y-bal: y-bal, ann: ann, converged: u0}))
@@ -269,51 +568,7 @@
     )
 )
 
-;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;
-;;; Swap Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;
 
-;; Swap X -> Y
-;; Swap Y -> X
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Liquidity Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Add Liquidity
-;; Withdraw Liquidity
-
-
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;; Stake Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Stake LP Tokens
-;; Unstake LP Tokens
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Reward Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Claim Rewards / Many
-
-
-;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;
-;;; AMM Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;
-
-;; D for loop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -374,8 +629,27 @@
 
 
 ;; Setting Pair Approval
+;; @desc: Sets the approval of a pair
+;; @params: x-token: principal, y-token: principal, lp-token: principal, approval: bool
+(define-public (set-pair-approval (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (approval bool))
+    (let 
+        (
+            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+        )
 
-;; Set A
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of (var-get admins) tx-sender)) (err "err-not-admin"))
+
+        ;; Update all appropriate maps
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair
+            {
+                approval: approval
+            }
+        )))
+    )
+)
+
 ;; Add Admin
 ;; Remove Admin
 ;; Change Swap Fee
