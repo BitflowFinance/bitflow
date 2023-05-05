@@ -443,7 +443,7 @@
 ;; Add Liquidity
 ;; @desc: Adds liquidity to a pair, mints the appropriate amount of LP tokens
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
-(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint))
+(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint) (min-lp-amount uint) )
     (let 
         (
             ;; Grabbing all data from PairsDataMap
@@ -468,6 +468,8 @@
             (y-fee (/ (* y-difference (var-get liquidity-fees)) u10000))
             (post-fee-balance-x (- new-balance-x x-fee))
             (post-fee-balance-y (- new-balance-y y-fee))
+            (x-amount-added-updated (- x-amount-added x-fee))
+            (y-amount-added-updated (- y-amount-added y-fee))
             (d2 (get-D post-fee-balance-x post-fee-balance-y current-amplification-coefficient))
             (liquidity-provider tx-sender)
         )
@@ -481,32 +483,102 @@
         ;; Assert that d2 is greater than d0
         (asserts! (> d2 d0) (err "err-d2-less-than-d0"))
 
-        ;; Assert that derived mint amount is greater than 0
-        (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) u0) (err "err-derived-mint-amount-zero"))
+        ;; Assert that derived mint amount is greater than min-lp-amount
+        (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) min-lp-amount) (err "err-derived-amount-less-than-lp"))
 
         ;; Check which token(s) need to be sent
         (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
             ;; Check which is non-zero
             (if (is-eq x-amount-added u0)
-                ;; Transfer y-amount-added tokens from tx-sender to this contract
-                (unwrap! (contract-call? y-token transfer y-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))
-                ;; Transfer x-amount-added tokens from tx-sender to this contract
-                (unwrap! (contract-call? x-token transfer x-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x"))
+
+                ;; Only transferring y tokens to this contract
+                (begin 
+
+                    ;; Transfer y-amount-added tokens from tx-sender to this contract
+                    (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))                
+
+                    ;; Transfer y-fees tokens from tx-sender to protocol-address
+                    (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
+                )
+
+                ;; Only transferring x tokens to this contract
+                (begin 
+
+                    ;; Transfer x-amount-added tokens from tx-sender to this contract
+                (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+                
+                ;; Transfer x-fees tokens from tx-sender to protocol-address
+                (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
+
+                )
             )
             ;; Transfer both x & y tokens to this contract
             (begin
                 
                 ;; Transfer x-amount-added tokens from tx-sender to this contract
-                (unwrap! (contract-call? x-token transfer x-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x"))
+                (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+                
+                ;; Transfer x-fees tokens from tx-sender to protocol-address
+                (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
 
                 ;; Transfer y-amount-added tokens from tx-sender to this contract
-                (unwrap! (contract-call? y-token transfer y-amount-added liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))
+                (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y-escrow"))
+
+                ;; Transfer y-fees tokens from tx-sender to protocol-address
+                (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
             
             )
         )
 
         ;; Mint LP tokens to tx-sender
-        (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d1 d0)) d0))) (err "err-minting-lp-tokens"))
+        (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d2 d0)) d0))) (err "err-minting-lp-tokens"))
+
+        ;; Update all appropriate maps
+        ;; Update PairsDataMap
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair 
+            {
+                balance-x: post-fee-balance-x,
+                balance-y: post-fee-balance-y,
+                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
+            }
+        )))
+    )
+)
+
+;; Withdraw Liquidity
+;; @desc: Withdraws liquidity from both pairs & burns the appropriate amount of LP tokens
+;; @params: x-token: principal, y-token: principal, lp-token: principal, lp-amount: uint, min-x-amount: uint, min-y-amount: uint
+(define-public (withdraw-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (lp-amount uint) (min-x-amount uint) (min-y-amount uint))
+    (let 
+        (
+            ;; Grabbing all data from PairsDataMap
+            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-approval (get approval current-pair))
+            (current-balance-x (get balance-x current-pair))
+            (current-balance-y (get balance-y current-pair))
+            (current-total-shares (get total-shares current-pair))
+            (withdrawal-balance-x (/ (* current-balance-x lp-amount) current-total-shares))
+            (withdrawal-balance-y (/ (* current-balance-y lp-amount) current-total-shares))
+            (new-balance-x (- current-balance-x withdrawal-balance-x))
+            (new-balance-y (- current-balance-y withdrawal-balance-y))
+            (liquidity-remover tx-sender)
+        )
+
+        ;; Assert that withdrawal-balance-x is greater than min-x-amount
+        (asserts! (> withdrawal-balance-x min-x-amount) (err "err-withdrawal-balance-x-less-than-min-x-amount"))
+
+        ;; Assert that withdrawal-balance-y is greater than min-y-amount
+        (asserts! (> withdrawal-balance-y min-y-amount) (err "err-withdrawal-balance-y-less-than-min-y-amount"))
+
+        ;; Burn LP tokens from tx-sender
+        (unwrap! (contract-call? lp-token burn liquidity-remover lp-amount) (err "err-burning-lp-tokens"))
+
+        ;; Transfer withdrawal-balance-x tokens from this contract to liquidity-taker
+        (unwrap! (as-contract (contract-call? x-token transfer withdrawal-balance-x tx-sender liquidity-remover none)) (err "err-transferring-token-x"))
+
+        ;; Transfer withdrawal-balance-y tokens from this contract to liquidity-taker
+        (unwrap! (as-contract (contract-call? y-token transfer withdrawal-balance-y tx-sender liquidity-remover none)) (err "err-transferring-token-y"))
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
@@ -515,14 +587,11 @@
             {
                 balance-x: new-balance-x,
                 balance-y: new-balance-y,
-                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
+                total-shares: (- current-total-shares lp-amount)
             }
         )))
     )
 )
-
-;; Withdraw Liquidity
-;; Review math
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -607,7 +676,6 @@
 (define-public (create-pair (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
     (let 
         (
-            (test true)
             (lp-owner tx-sender)
         )
 
