@@ -22,18 +22,18 @@ epoch = 2.1
 
 [contracts.susdt-token]
 path = 'contracts/susdt-token.clar'
-clarity_version = 1
-epoch = 2.05
+clarity_version = 2
+epoch = 2.1
 
 [contracts.usda-susdt-lp-token]
 path = 'contracts/usda-susdt-lp-token.clar'
-clarity_version = 1
-epoch = 2.05
+clarity_version = 2
+epoch = 2.1
 
 [contracts.usda-token]
 path = 'contracts/usda-token.clar'
-clarity_version = 1
-epoch = 2.05
+clarity_version = 2
+epoch = 2.1
 [repl.analysis]
 passes = ['check_checker']
 
