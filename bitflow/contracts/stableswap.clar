@@ -1,4 +1,4 @@
-;; Stableswap Core Contract
+;; Bitflow Stableswap Core Contract
 ;; This contract handles the core logic of the Stableswap protocol.
 ;; The initial trading pair is sUSDT/USDA
 ;; USDA is 6 decimals
@@ -21,7 +21,7 @@
 (define-constant this-contract (as-contract tx-sender))
 
 ;; Fee escrow contract address
-(define-constant fee-escrow-contract .stableswap-fee-escrow)
+(define-constant staking-and-rewards-contract .stableswap-staking-and-rewards)
 
 ;; Deployment height
 (define-constant deployment-height block-height)
@@ -314,8 +314,8 @@
         ;; Transfer updated-x-balance tokens from tx-sender to this contract
         (unwrap! (contract-call? x-token transfer updated-x-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-x"))
 
-        ;; Transfer x-amount-fee-lps tokens from tx-sender to fee-escrow-contract
-        (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper fee-escrow-contract none) (err "err-transferring-token-x-fee"))
+        ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
+        (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-x-fee"))
 
         ;; Transfer x-amount-fee-protocol tokens from tx-sender to protocol-address
         (unwrap! (contract-call? x-token transfer x-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-x-fee-protocol"))
@@ -390,8 +390,8 @@
         ;; Transfer updated-y-balance tokens from tx-sender to this contract
         (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y-updated-amount"))
 
-        ;; Transfer y-amount-fee-lps tokens from tx-sender to fee-escrow-contract
-        (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper fee-escrow-contract none) (err "err-transferring-token-y-swap-fee"))
+        ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
+        (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-y-swap-fee"))
 
         ;; Transfer y-amount-fee-protocol tokens from tx-sender to protocol-address
         (unwrap! (contract-call? y-token transfer y-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-y-protocol-fee"))
