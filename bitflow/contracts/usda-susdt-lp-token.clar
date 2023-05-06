@@ -3,6 +3,7 @@
 ;;;;;;;;;;;;;;;;;;;;; SIP 010 ;;;;;;;;;;;;;;;;;;;;;;
 ;; (impl-trait .bitflow-sip-010.bitflow-lp-trait)
 (impl-trait .sip-010-trait-ft-standard.sip-010-trait)
+(impl-trait .lp-trait.lp-trait)
 
 
 (define-fungible-token usda-susdt-lp)
@@ -20,6 +21,9 @@
 ;; ---------------------------------------------------------
 ;; SIP-10 Functions
 ;; ---------------------------------------------------------
+(define-read-only (adheres-to-sip-010)
+  (ok true)
+)
 
 (define-read-only (get-name)
   (ok "USDA-sUSDT-LP")

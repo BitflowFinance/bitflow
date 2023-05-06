@@ -30,8 +30,6 @@
 ;; Helper uint list for filtering out existing cycles in cycles-staked list
 (define-data-var helper-uint-list (list 12000 uint) (list ))
 
-;; Helper staker data for updating StakerDataPerCycleMap
-;;(define-data-var helper-staker-and-cycle { x-token: principal, y-token: principal, lp-token: principal, amount: uint, cycles-staked: (list 12000 uint), total-currently-staked: uint } {cycles-staked: (list ), total-currently-staked: u0})
 
 ;;;;;;;;;;
 ;; Maps ;;
@@ -97,11 +95,12 @@
 )
 
 
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;; Stake Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;
+;;; Stake Function ;;;
+;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Stake LP Tokens
 ;; @desc: This function allows users to stake LP tokens for X cycles to earn rewards
@@ -210,4 +209,12 @@
     )
 )
 
-;; Stake Helper Tokens
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Unstake Function ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Stake LP Tokens
