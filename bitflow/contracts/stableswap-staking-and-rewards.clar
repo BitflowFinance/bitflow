@@ -120,7 +120,6 @@
             (next-cycles (map map-filtered-null-list filtered-null-list))
             (updated-helper-uint-list (var-set helper-uint-list current-cycles-staked))
             (next-cycles-not-in-current-cycles (filter filter-cycles-staked next-cycles))
-            (updated-helper-uint-to-amount (var-set helper-uint amount))
         )
 
         ;; Assert that cycles is less than 121
@@ -134,6 +133,9 @@
 
         ;; Transfer LP tokens from user to contract
         (unwrap! (contract-call? lp-token transfer amount tx-sender (as-contract tx-sender) none) (err "err-lp-token-transfer-failed"))
+
+        ;; Update total-lp-tokens-staked
+        (fold update-staker-data-per-cycle-fold next-cycles {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycles-staked: current-cycles-staked, amount: amount})
 
         ;; Update staker data
         ;; Update StakerDataMap
@@ -150,8 +152,21 @@
             })
         )
 
-        ;; Update StakerDataPerCycleMap
-        (ok (fold update-staker-data-per-cycle-fold next-cycles {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycles-staked: current-cycles-staked, amount: amount}))
+        ;; Update unstakeable lp-token StakerDataMap
+        (ok (if (is-some (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: (+ (+ u1 current-cycle) cycles)}))
+            ;; Staker already exists, only update lp-token-to-unstake
+            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: (+ (+ u1 current-cycle) cycles)} (merge 
+                (default-to { lp-token-staked: u0, reward-claimed: u0, lp-token-to-unstake: u0} (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: (+ (+ u1 current-cycle) cycles)}))
+                {lp-token-to-unstake: (+ amount (default-to u0 (get lp-token-to-unstake (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: (+ (+ u1 current-cycle) cycles)}))))}
+            ))
+            ;; Staker doesn't exist, create new entry
+            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: (+ (+ u1 current-cycle) cycles)} { 
+                lp-token-staked: u0, 
+                reward-claimed: u0, 
+                lp-token-to-unstake: u0
+            })
+        ))
+
     )
 )
 
@@ -193,11 +208,10 @@
         ;; Check if staker is already staked in this cycle
         (if (is-some (index-of cycles-staked-static next-cycle))
             ;; Staker is already staked in this cycle, update StakerDataPerCycleMap
-            (map-set StakerDataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, user: tx-sender, cycle: next-cycle} {
-                lp-token-staked: (+ amount-static current-cycle-lp-token-staked),
-                reward-claimed: u0,
-                lp-token-to-unstake: u0
-            })
+            (map-set StakerDataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, user: tx-sender, cycle: next-cycle} (merge 
+                    current-cycle-user-data
+                    {lp-token-staked: (+ amount-static current-cycle-lp-token-staked)}
+            ))
             ;; Staker is not already staked in this cycle, create new StakerDataPerCycleMap
             (map-set StakerDataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, user: tx-sender, cycle: next-cycle} {
                 lp-token-staked: amount-static,
