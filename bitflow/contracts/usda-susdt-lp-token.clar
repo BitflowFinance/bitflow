@@ -75,7 +75,7 @@
     (asserts! (is-eq tx-sender burner) ERR-NOT-AUTHORIZED)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
-    (ft-mint? usda-susdt-lp amount burner)
+    (ft-burn? usda-susdt-lp amount burner)
   )
 )
 

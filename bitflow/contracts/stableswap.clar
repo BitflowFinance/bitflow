@@ -87,12 +87,6 @@
     total-lp-token-staked: uint
 })
 
-(define-map UserDataMap {x-token: principal, y-token: principal, lp-token: principal, user: principal} {
-    lp-token-staked: uint,
-    reward-claimed: uint,
-    lp-token-to-unstake: uint
-})
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -111,47 +105,24 @@
     (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: cycle-num})
 )
 
-;; Get user data
-(define-read-only (get-user-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (user principal)) 
-    (map-get? UserDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: user})
-)
-
 ;; Get current cycle
 (define-read-only (get-current-cycle) 
     (/ (- block-height deployment-height) cycle-length)
 )
 
+;; Get cycle from height
+(define-read-only (get-cycle-from-height (height uint)) 
+    (/ (- height deployment-height) cycle-length)
+)
+
+;; Get starting height from cycle
+(define-read-only (get-starting-height-from-cycle (cycle uint)) 
+    (+ deployment-height (* cycle cycle-length))
+)
+
 ;; Get deployment height
 (define-read-only (get-deployment-height) 
     deployment-height
-)
-
-;; Get any cycle rewards; maybe -and-claimable-lpt 
-(define-read-only (get-cycle-rewards (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle uint)) 
-    (let 
-        (
-            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
-            (cycle-data (unwrap! (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: cycle}) (err "err-no-cycle-data")))
-            (balance-x-fee (get cycle-fee-balance-x cycle-data))
-            (balance-y-fee (get cycle-fee-balance-y cycle-data))
-            (user-data (unwrap! (map-get? UserDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-user-data")))
-            (total-lpt-staked (get total-lp-token-staked cycle-data))
-            (user-lpt-staked (get lp-token-staked user-data))
-            (user-liquidity-pct 
-                (if (> total-lpt-staked u0) 
-                    (/ (* u1000 user-lpt-staked) total-lpt-staked)
-                    u0
-                )     
-            )
-            (user-x-rewards (/ (* user-liquidity-pct balance-x-fee) u1000))
-            (user-y-rewards (/ (* user-liquidity-pct balance-y-fee) u1000))
-        )
-
-        (ok {
-            x-token-reward: user-x-rewards,
-            y-token-reward: user-y-rewards,
-        })
-    )
 )
 
 ;; Get up to last 120 cycle rewards -> nice to have
