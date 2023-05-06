@@ -72,8 +72,6 @@
     y-decimals: uint,
     balance-x: uint,
     balance-y: uint,
-    fee-balance-x: uint,
-    fee-balance-y: uint,
     d: uint,
     amplification-coefficient: uint,
 })
@@ -92,12 +90,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Get pair data
-(define-read-only (get-pair-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>)) 
+(define-read-only (get-pair-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>)) 
     (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
 )
 
 ;; Get cycle data
-(define-read-only (get-cycle-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle-num uint)) 
+(define-read-only (get-cycle-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycle-num uint)) 
     (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: cycle-num})
 )
 
@@ -297,7 +295,6 @@
             {
                 balance-x: updated-x-balance,
                 balance-y: new-y,
-                fee-balance-x: (+ (get fee-balance-x pair-data) x-amount-fee-lps)            
             }
         ))
 
@@ -372,7 +369,6 @@
             {
                 balance-x: new-x,
                 balance-y: updated-y-balance,
-                fee-balance-y: (+ (get fee-balance-y pair-data) y-amount-fee-lps)            
             }
         ))
 
@@ -676,8 +672,6 @@
             y-decimals: (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")),
             balance-x: initial-x-bal,
             balance-y: initial-y-bal,
-            fee-balance-x: u0,
-            fee-balance-y: u0,
             d: (+ initial-x-bal initial-y-bal),
             amplification-coefficient: amplification-coefficient,
         }))
