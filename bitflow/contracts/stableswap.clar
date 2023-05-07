@@ -501,7 +501,8 @@
             {
                 balance-x: post-fee-balance-x,
                 balance-y: post-fee-balance-y,
-                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
+                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0)),
+                d: d2
             }
         )))
     )
@@ -519,11 +520,14 @@
             (current-balance-x (get balance-x current-pair))
             (current-balance-y (get balance-y current-pair))
             (current-total-shares (get total-shares current-pair))
+            (current-amplification-coefficient (get amplification-coefficient current-pair))
             (withdrawal-balance-x (/ (* current-balance-x lp-amount) current-total-shares))
             (withdrawal-balance-y (/ (* current-balance-y lp-amount) current-total-shares))
             (new-balance-x (- current-balance-x withdrawal-balance-x))
             (new-balance-y (- current-balance-y withdrawal-balance-y))
             (liquidity-remover tx-sender)
+            ;; get-D using the new-balance-x and new-balance-y
+            (new-d (get-D new-balance-x new-balance-y current-amplification-coefficient))
         )
 
         ;; Assert that withdrawal-balance-x is greater than min-x-amount
@@ -548,7 +552,8 @@
             {
                 balance-x: new-balance-x,
                 balance-y: new-balance-y,
-                total-shares: (- current-total-shares lp-amount)
+                total-shares: (- current-total-shares lp-amount),
+                d: new-d
             }
         )))
     )
