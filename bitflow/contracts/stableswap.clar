@@ -730,3 +730,25 @@
 ;; Remove Admin
 ;; Change Swap Fee
 ;; Change Liquidity Fee
+
+;; Admins can change the amplification coefficient in PairsDataMap
+;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint
+(define-public (change-amplification-coefficient (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint))
+    (let 
+        (
+            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-admins (var-get admins))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Update all appropriate maps
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair
+            {
+                amplification-coefficient: amplification-coefficient
+            }
+        )))
+    )
+)
