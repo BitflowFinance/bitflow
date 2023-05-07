@@ -587,16 +587,16 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
-            (merge 
-                current-pair 
-                {
-                    balance-x: post-fee-balance-x,
-                    balance-y: post-fee-balance-y,
-                    total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
-                }
-            ))
-        )
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair 
+            {
+                balance-x: post-fee-balance-x,
+                balance-y: post-fee-balance-y,
+                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0)),
+                d: d2
+            }
+        )))
+
     )
 )
 
@@ -612,11 +612,14 @@
             (current-balance-x (get balance-x current-pair))
             (current-balance-y (get balance-y current-pair))
             (current-total-shares (get total-shares current-pair))
+            (current-amplification-coefficient (get amplification-coefficient current-pair))
             (withdrawal-balance-x (/ (* current-balance-x lp-amount) current-total-shares))
             (withdrawal-balance-y (/ (* current-balance-y lp-amount) current-total-shares))
             (new-balance-x (- current-balance-x withdrawal-balance-x))
             (new-balance-y (- current-balance-y withdrawal-balance-y))
             (liquidity-remover tx-sender)
+            ;; get-D using the new-balance-x and new-balance-y
+            (new-d (get-D new-balance-x new-balance-y current-amplification-coefficient))
         )
 
         ;; Assert that withdrawal-balance-x is greater than min-x-amount
@@ -641,7 +644,8 @@
             {
                 balance-x: new-balance-x,
                 balance-y: new-balance-y,
-                total-shares: (- current-total-shares lp-amount)
+                total-shares: (- current-total-shares lp-amount),
+                d: new-d
             }
         )))
     )
@@ -818,3 +822,25 @@
 ;; Remove Admin
 ;; Change Swap Fee
 ;; Change Liquidity Fee
+
+;; Admins can change the amplification coefficient in PairsDataMap
+;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint
+(define-public (change-amplification-coefficient (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint))
+    (let 
+        (
+            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-admins (var-get admins))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Update all appropriate maps
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+            current-pair
+            {
+                amplification-coefficient: amplification-coefficient
+            }
+        )))
+    )
+)
