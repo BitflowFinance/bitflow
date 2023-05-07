@@ -122,23 +122,39 @@
 ;; Get up to last 120 cycle rewards -> nice to have
 ;; (define-read-only (get-cycle-rewards) body)
 
-;; Get DY
-(define-read-only (get-dy (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint))
+;; Get DX
+(define-read-only (get-dx (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint))
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
+            (x-decimals (get x-decimals pair-data))
+            (y-decimals (get y-decimals pair-data))
             (swap-fee-lps (get lps (var-get swap-fees)))
             (swap-fee-protocol (get protocol (var-get swap-fees)))
             (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
-            (x-amount-fee (/ (* x-amount total-swap-fee) u10000))
-            (updated-x-amount (- x-amount x-amount-fee))
-            (updated-x-balance (+ current-balance-x updated-x-amount))
-            (new-y (get-y updated-x-balance current-balance-y updated-x-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
-            (dy (- current-balance-y new-y))
+
+            ;; Scale up balances to perform AMM calculations with get-x
+            (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
+            (current-balance-x-scaled (get scaled-x scaled-up-balances))
+            (current-balance-y-scaled (get scaled-y scaled-up-balances))
+            (scaled-up-swap-amount (get-scaled-up-token-amounts u0 y-amount x-decimals y-decimals))
+            (y-amount-scaled (get scaled-y scaled-up-swap-amount))
+            (y-amount-fees-lps-scaled (/ (* y-amount-scaled swap-fee-lps) u10000))
+            (y-amount-fees-protocol-scaled (/ (* y-amount-scaled swap-fee-protocol) u10000))
+            (y-amount-total-fees-scaled (/ (* y-amount total-swap-fee) u10000))
+            (updated-y-amount-scaled (- y-amount-scaled y-amount-total-fees-scaled))
+            (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
+            (new-x-scaled (get-x current-balance-y-scaled updated-y-balance-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
+
+            ;; Scale down to precise amounts for x and dx, as well as y-amount-fee-lps, and y-amount-fee-protocol
+            (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
+            (dx (- current-balance-x new-x))
+            (y-amount-fee-lps (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
+            (y-amount-fee-protocol (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled x-decimals y-decimals)))
         )
-        (ok dy)
+        (ok dx)
     )
 )
 
@@ -187,6 +203,45 @@
         )
 
 
+    )
+)
+
+;; Get DY
+(define-read-only (get-dy (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint))
+    (let 
+        (
+            
+            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-balance-x (get balance-x pair-data))
+            (current-balance-y (get balance-y pair-data))
+            (x-decimals (get x-decimals pair-data))
+            (y-decimals (get y-decimals pair-data))
+            (swap-fee-lps (get lps (var-get swap-fees)))
+            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+
+
+            ;; Scale up balances to perform AMM calculations with get-y
+            (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
+            (current-balance-x-scaled (get scaled-x scaled-up-balances))
+            (current-balance-y-scaled (get scaled-y scaled-up-balances))
+            (scaled-up-swap-amount (get-scaled-up-token-amounts x-amount u0 x-decimals y-decimals))
+            (x-amount-scaled (get scaled-x scaled-up-swap-amount))
+            (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
+            (x-amount-fees-protocol-scaled (/ (* x-amount-scaled swap-fee-protocol) u10000))
+            (x-amount-total-fees-scaled (/ (* x-amount total-swap-fee) u10000))
+            (updated-x-amount-scaled (- x-amount-scaled x-amount-total-fees-scaled))
+            (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
+            (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
+            
+            ;; Scale down to precise amounts for y and dy, as well as x-amount-fee-lps, and x-amount-fee-protocol
+            (new-y (get scaled-y (get-scaled-down-token-amounts u0 new-y-scaled x-decimals y-decimals)))
+            (dy (- current-balance-y new-y))
+            (x-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts x-amount-fees-lps-scaled u0 x-decimals y-decimals)))
+            (x-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts x-amount-fees-protocol-scaled u0 x-decimals y-decimals)))
+        )
+        ;; (ok {dy: dy, new-y: new-y, x-amount-fees-lps: x-amount-fee-lps, x-amount-fees-protocol: x-amount-fees-protocol})
+        (ok dy)
     )
 )
 
@@ -251,23 +306,36 @@
 (define-public (swap-x-for-y (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
     (let 
         (
+            (swapper tx-sender)
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
+            (x-decimals (get x-decimals pair-data))
+            (y-decimals (get y-decimals pair-data))
             (swap-fee-lps (get lps (var-get swap-fees)))
             (swap-fee-protocol (get protocol (var-get swap-fees)))
-            (x-amount-fee-lps (/ (* x-amount swap-fee-lps) u10000))
-            (x-amount-fee-protocol (/ (* x-amount swap-fee-protocol) u10000))
-            (x-amount-fee-total (+ x-amount-fee-lps x-amount-fee-protocol))
-            (updated-x-amount (- x-amount x-amount-fee-total))
-            (updated-x-balance (+ current-balance-x updated-x-amount))
-            (new-y (get-y updated-x-balance current-balance-y updated-x-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+
+            ;; Scale up balances and the swap amount to perform AMM calculations with get-y
+            (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
+            (current-balance-x-scaled (get scaled-x scaled-up-balances))
+            (current-balance-y-scaled (get scaled-y scaled-up-balances))
+            (scaled-up-swap-amount (get-scaled-up-token-amounts x-amount u0 x-decimals y-decimals))
+            (x-amount-scaled (get scaled-x scaled-up-swap-amount))
+            (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
+            (x-amount-fees-protocol-scaled (/ (* x-amount-scaled swap-fee-protocol) u10000))
+            (updated-x-amount-scaled (- x-amount-scaled (+ x-amount-fees-lps-scaled x-amount-fees-protocol-scaled)))
+            (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
+            (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
+            
+            ;; Scale down to precise amounts for y and dy, as well as x-amount-fee-lps, and x-amount-fee-protocol
+            (new-y (get scaled-y (get-scaled-down-token-amounts u0 new-y-scaled x-decimals y-decimals)))
             (dy (- current-balance-y new-y))
-            (swapper tx-sender)
-            ;; As long as get-y converges, the stableswap invariant D should remain approximately the same.
-            (old-D (get d pair-data))
-            (new-D (get-D updated-x-balance new-y (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (x-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts x-amount-fees-lps-scaled u0 x-decimals y-decimals)))
+            (x-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts x-amount-fees-protocol-scaled u0 x-decimals y-decimals)))
+            (updated-x-amount (- x-amount (+ x-amount-fee-lps x-amount-fee-protocol)))
+            (updated-x-balance (+ current-balance-x updated-x-amount))
         )
 
         ;; Assert that pair is approved
@@ -337,7 +405,7 @@
             {
                 balance-x: updated-x-balance,
                 balance-y: new-y,
-                d: new-D
+                d: (get-D updated-x-balance-scaled new-y-scaled (* (get amplification-coefficient pair-data) number-of-tokens))
             }
         ))
 
@@ -361,31 +429,42 @@
 
     )
 )
-
 ;; Swap Y -> X
 ;; @desc: Swaps Y token for X token
 ;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
-(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
+(define-public (swap-y-for-x (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
+            (swapper tx-sender)
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
+            (x-decimals (get x-decimals pair-data))
+            (y-decimals (get y-decimals pair-data))
             (swap-fee-lps (get lps (var-get swap-fees)))
             (swap-fee-protocol (get protocol (var-get swap-fees)))
-            (y-amount-fee-lps (/ (* y-amount swap-fee-lps) u10000))
-            (y-amount-fee-protocol (/ (* y-amount swap-fee-protocol) u10000))
-            (y-amount-fee-total (+ y-amount-fee-lps y-amount-fee-protocol))
-            (updated-y-amount (- y-amount y-amount-fee-total))
-            (updated-y-balance (+ current-balance-y updated-y-amount))
-            (new-x (get-x updated-y-balance current-balance-x updated-y-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
-            (dx (- current-balance-x new-x))
-            (swapper tx-sender)
-            ;; As long as get-x converges, the stableswap invariant D should remain approximately the same.
-            (old-D (get d pair-data))
-            (new-D (get-D updated-y-balance new-x (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
 
+            ;; Scale up balances and the swap amount to perform AMM calculations with get-x
+            (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
+            (current-balance-x-scaled (get scaled-x scaled-up-balances))
+            (current-balance-y-scaled (get scaled-y scaled-up-balances))
+            (scaled-up-swap-amount (get-scaled-up-token-amounts u0 y-amount x-decimals y-decimals))
+            (y-amount-scaled (get scaled-y scaled-up-swap-amount))
+            (y-amount-fees-lps-scaled (/ (* y-amount-scaled swap-fee-lps) u10000))
+            (y-amount-fees-protocol-scaled (/ (* y-amount-scaled swap-fee-protocol) u10000))
+            (updated-y-amount-scaled (- y-amount-scaled (+ y-amount-fees-lps-scaled y-amount-fees-protocol-scaled)))
+            (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
+            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
+            
+            ;; Scale down to precise amounts for y and dy, as well as y-amount-fee-lps, and y-amount-fee-protocol
+            (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
+            (dx (- current-balance-x new-x))
+            (y-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
+            (y-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled y-decimals x-decimals)))
+            (updated-y-amount (- y-amount (+ y-amount-fee-lps y-amount-fee-protocol)))
+            (updated-y-balance (+ current-balance-x updated-y-amount))
         )
 
         ;; Assert that pair is approved
@@ -455,7 +534,7 @@
             {
                 balance-x: new-x,
                 balance-y: updated-y-balance,
-                d: new-D
+                d: (get-D new-x-scaled updated-y-balance-scaled (* (get amplification-coefficient pair-data) number-of-tokens))
             }
         ))
 
@@ -479,8 +558,6 @@
 
     )
 )
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -679,6 +756,8 @@
             ;; Grabbing all data from PairsDataMap
             (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
+            (x-decimals (get x-decimals current-pair))
+            (y-decimals (get y-decimals current-pair))
             (current-balance-x (get balance-x current-pair))
             (current-balance-y (get balance-y current-pair))
             (current-total-shares (get total-shares current-pair))
@@ -689,7 +768,10 @@
             (new-balance-y (- current-balance-y withdrawal-balance-y))
             (liquidity-remover tx-sender)
             ;; get-D using the new-balance-x and new-balance-y
-            (new-d (get-D new-balance-x new-balance-y current-amplification-coefficient))
+            (new-balances-scaled (get-scaled-up-token-amounts new-balance-x new-balance-y x-decimals y-decimals))
+            (new-balance-x-scaled (get scaled-x new-balances-scaled))
+            (new-balance-y-scaled (get scaled-y new-balances-scaled))
+            (new-d (get-D new-balance-x-scaled new-balance-y-scaled current-amplification-coefficient))
         )
 
         ;; Assert that withdrawal-balance-x is greater than min-x-amount
