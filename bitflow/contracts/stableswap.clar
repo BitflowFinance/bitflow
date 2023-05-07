@@ -503,13 +503,15 @@
             (x-difference (if (> ideal-balance-x new-balance-x) (- ideal-balance-x new-balance-x) (- new-balance-x ideal-balance-x)))
             (y-difference (if (> ideal-balance-y new-balance-y) (- ideal-balance-y new-balance-y) (- new-balance-y ideal-balance-y)))
             ;; Applying fees for imbalanced liquidity
-            (x-fee (/ (* x-difference (var-get liquidity-fees)) u10000))
-            (y-fee (/ (* y-difference (var-get liquidity-fees)) u10000))
-            (post-fee-balance-x (- new-balance-x x-fee))
-            (post-fee-balance-y (- new-balance-y y-fee))
+            (ideal-x-fee (/ (* x-difference (var-get liquidity-fees)) u10000))
+            (ideal-y-fee (/ (* y-difference (var-get liquidity-fees)) u10000))
+            (x-fee (if (> x-amount-added ideal-x-fee) ideal-x-fee x-amount-added))
+            (y-fee (if (> y-amount-added ideal-y-fee) ideal-y-fee y-amount-added))
             (x-amount-added-updated (- x-amount-added x-fee))
             (y-amount-added-updated (- y-amount-added y-fee))
-            (d2 (get-D post-fee-balance-x post-fee-balance-y current-amplification-coefficient))
+            (new-balance-x-post-fee (+ current-balance-x x-amount-added-updated))
+            (new-balance-y-post-fee (+ current-balance-y y-amount-added-updated))
+            (d2 (get-D new-balance-x-post-fee new-balance-y-post-fee current-amplification-coefficient))
             (liquidity-provider tx-sender)
         )
 
@@ -616,8 +618,8 @@
             (merge 
                 current-pair 
                 {
-                    balance-x: post-fee-balance-x,
-                    balance-y: post-fee-balance-y,
+                    balance-x: new-balance-x-post-fee,
+                    balance-y: new-balance-y-post-fee,
                     total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
                 }
             ))
