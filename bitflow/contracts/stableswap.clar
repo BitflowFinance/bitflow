@@ -550,34 +550,59 @@
                     (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y-escrow"))
                 )
             )
-            (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
-                ;; Check which is non-zero
-                (if (is-eq x-amount-added u0)
-                    ;; Only transferring y tokens to this contract
-                    (begin 
-                        ;; Transfer y-amount-added tokens from tx-sender to this contract
-                        (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))                
-                        ;; Transfer y-fees tokens from tx-sender to protocol-address
-                        (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
+            (if (and (is-eq x-fee u0) (is-eq y-fee u0))
+                (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
+                    ;; Check which is non-zero
+                    (if (is-eq x-amount-added u0)
+                        ;; Only transferring y tokens to this contract
+                        (begin 
+                            ;; Transfer y-amount-added tokens from tx-sender to this contract
+                            (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))                
+                        )
+                        ;; Only transferring x tokens to this contract
+                        (begin 
+                            ;; Transfer x-amount-added tokens from tx-sender to this contract
+                            (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+                        )
                     )
-                    ;; Only transferring x tokens to this contract
-                    (begin 
+                    ;; Transfer both x & y tokens to this contract
+                    (begin
+                        ;; Transfer x-amount-added tokens from tx-sender to this contract
+                        (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+                        
+                        ;; Transfer y-amount-added tokens from tx-sender to this contract
+                        (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y-escrow"))
+                    )
+                )   
+                (if (or (is-eq x-amount-added u0) (is-eq y-amount-added u0))
+                    ;; Check which is non-zero
+                    (if (is-eq x-amount-added u0)
+                        ;; Only transferring y tokens to this contract
+                        (begin 
+                            ;; Transfer y-amount-added tokens from tx-sender to this contract
+                            (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))                
+                            ;; Transfer y-fees tokens from tx-sender to protocol-address
+                            (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
+                        )
+                        ;; Only transferring x tokens to this contract
+                        (begin 
+                            ;; Transfer x-amount-added tokens from tx-sender to this contract
+                            (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+                            ;; Transfer x-fees tokens from tx-sender to protocol-address
+                            (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
+                        )
+                    )
+                    ;; Transfer both x & y tokens to this contract
+                    (begin
                         ;; Transfer x-amount-added tokens from tx-sender to this contract
                         (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
                         ;; Transfer x-fees tokens from tx-sender to protocol-address
                         (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
+                        ;; Transfer y-amount-added tokens from tx-sender to this contract
+                        (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y-escrow"))
+                        ;; Transfer y-fees tokens from tx-sender to protocol-address
+                        (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
                     )
-                )
-                ;; Transfer both x & y tokens to this contract
-                (begin
-                    ;; Transfer x-amount-added tokens from tx-sender to this contract
-                    (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
-                    ;; Transfer x-fees tokens from tx-sender to protocol-address
-                    (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
-                    ;; Transfer y-amount-added tokens from tx-sender to this contract
-                    (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y-escrow"))
-                    ;; Transfer y-fees tokens from tx-sender to protocol-address
-                    (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
                 )
             )
         )
@@ -587,16 +612,16 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
-            current-pair 
-            {
-                balance-x: post-fee-balance-x,
-                balance-y: post-fee-balance-y,
-                total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0)),
-                d: d2
-            }
-        )))
-
+        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
+            (merge 
+                current-pair 
+                {
+                    balance-x: post-fee-balance-x,
+                    balance-y: post-fee-balance-y,
+                    total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
+                }
+            ))
+        )
     )
 )
 
