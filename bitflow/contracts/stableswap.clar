@@ -689,17 +689,6 @@
 )
 
 
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;; Stake Functions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Stake LP Tokens
-;; Unstake / Claim Rewards LP Tokens
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; AMM Functions ;;;
@@ -756,7 +745,68 @@
     )
 )
 
+;; Scale up the token amounts to the same level of precision before performing AMM calculations
+;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-unscaled, y-amount-unscaled
+(define-private (get-scaled-up-token-amounts (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-unscaled uint) (y-amount-unscaled uint))
+    (let 
+        (
+            ;; (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            ;; (x-num-decimals (get x-decimals current-pair))
+            ;; (y-num-decimals (get y-decimals current-pair))
+            (x-num-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
+            (y-num-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
+            (scaled-x 
+                ;; if same number of decimals, set to x-amount-unscaled
+                (if (is-eq x-num-decimals y-num-decimals)
+                    x-amount-unscaled
+                    ;; if x has more decimals, set to x-amount-unscaled; otherwise scale up by the difference in decimals
+                    (if (> x-num-decimals y-num-decimals) x-amount-unscaled (* x-amount-unscaled (pow u10 (- y-num-decimals x-num-decimals))))
+                )
+            )
+            (scaled-y 
+                ;; if same number of decimals, set to y-amount-unscaled
+                (if (is-eq x-num-decimals y-num-decimals)
+                    y-amount-unscaled
+                    ;; if y has more decimals, set to y-amount-unscaled; otherwise scale up by the difference in decimals
+                    (if (> y-num-decimals x-num-decimals) y-amount-unscaled (* y-amount-unscaled (pow u10 (- x-num-decimals y-num-decimals))))
+                )
+            )
+        )
+        (ok {scaled-x: scaled-x, scaled-y: scaled-y})
+    )
+)
 
+;; Scale down the token amounts to their respective levels of precision before performing any transfers
+;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-unscaled, y-amount-unscaled
+(define-private (get-scaled-down-token-amounts (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-scaled uint) (y-amount-scaled uint))
+    (let 
+        (
+            ;; (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            ;; (x-num-decimals (get x-decimals current-pair))
+            ;; (y-num-decimals (get y-decimals current-pair))
+            (x-num-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
+            (y-num-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
+        
+            (scaled-x 
+                ;; if same number of decimals, set to x-amount-scaled
+                (if (is-eq x-num-decimals y-num-decimals)
+                    x-amount-scaled
+                    ;; if x has more decimals, set to x-amount-scaled; otherwise scale down by the difference in decimals
+                    (if (> x-num-decimals y-num-decimals) x-amount-scaled (/ x-amount-scaled (pow u10 (- y-num-decimals x-num-decimals))))
+                )
+            )
+            (scaled-y 
+                ;; if same number of decimals, set to y-amount-scaled
+                (if (is-eq x-num-decimals y-num-decimals)
+                    y-amount-scaled
+                    ;; if y has more decimals, set to y-amount-scaled; otherwise scale down by the difference in decimals
+                    (if (> y-num-decimals x-num-decimals) y-amount-scaled (/ y-amount-scaled (pow u10 (- x-num-decimals y-num-decimals))))
+                )
+            )
+        )
+        (ok {scaled-x: scaled-x, scaled-y: scaled-y})
+    )
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
