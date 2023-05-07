@@ -495,8 +495,11 @@
     (let 
         (
             ;; Grabbing all data from PairsDataMap
+            (liquidity-provider tx-sender)
             (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
+            (x-decimals (get x-decimals current-pair))
+            (y-decimals (get y-decimals current-pair))
             (current-balance-x (get balance-x current-pair))
             (new-balance-x (+ current-balance-x x-amount-added))
             (current-balance-y (get balance-y current-pair))
@@ -504,24 +507,44 @@
             (current-total-shares (get total-shares current-pair))
             (current-amplification-coefficient (get amplification-coefficient current-pair))
             
+            ;; Scale up for AMM calculations depending on decimal places assigned to tokens
+            (amounts-added-scaled (get-scaled-up-token-amounts x-amount-added y-amount-added x-decimals y-decimals))
+            (x-amount-added-scaled (get scaled-x amounts-added-scaled))
+            (y-amount-added-scaled (get scaled-y amounts-added-scaled))
+            (current-balances-scaled (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
+            (current-balance-x-scaled (get scaled-x current-balances-scaled))
+            (current-balance-y-scaled (get scaled-y current-balances-scaled))
+            (new-balances-scaled (get-scaled-up-token-amounts new-balance-x new-balance-y x-decimals y-decimals))
+            (new-balance-x-scaled (get scaled-x new-balances-scaled))
+            (new-balance-y-scaled (get scaled-y new-balances-scaled))
+            
             ;; Calculating the ideal balance
-            (d0 (get-D current-balance-x current-balance-y current-amplification-coefficient))
-            (d1 (get-D new-balance-x new-balance-y current-amplification-coefficient))
-            (ideal-balance-x (/ (* d1 current-balance-x) d0))
-            (ideal-balance-y (/ (* d1 current-balance-y) d0))
-            (x-difference (if (> ideal-balance-x new-balance-x) (- ideal-balance-x new-balance-x) (- new-balance-x ideal-balance-x)))
-            (y-difference (if (> ideal-balance-y new-balance-y) (- ideal-balance-y new-balance-y) (- new-balance-y ideal-balance-y)))
-            ;; Applying fees for imbalanced liquidity
-            (ideal-x-fee (/ (* x-difference (var-get liquidity-fees)) u10000))
-            (ideal-y-fee (/ (* y-difference (var-get liquidity-fees)) u10000))
-            (x-fee (if (> x-amount-added ideal-x-fee) ideal-x-fee x-amount-added))
-            (y-fee (if (> y-amount-added ideal-y-fee) ideal-y-fee y-amount-added))
+            (d0 (get-D current-balance-x-scaled current-balance-y-scaled current-amplification-coefficient))
+            (d1 (get-D new-balance-x-scaled new-balance-y-scaled current-amplification-coefficient))
+            (ideal-balance-x-scaled (/ (* d1 current-balance-x-scaled) d0))
+            (ideal-balance-y-scaled (/ (* d1 current-balance-y-scaled) d0))
+            (x-difference (if (> ideal-balance-x-scaled new-balance-x-scaled) (- ideal-balance-x-scaled new-balance-x-scaled) (- new-balance-x-scaled ideal-balance-x-scaled)))
+            (y-difference (if (> ideal-balance-y-scaled new-balance-y-scaled) (- ideal-balance-y-scaled new-balance-y-scaled) (- new-balance-y-scaled ideal-balance-y-scaled)))
+            
+            ;; Fees applied if adding imbalanced liquidity
+            (ideal-x-fee-scaled (/ (* x-difference (var-get liquidity-fees)) u10000))
+            (ideal-y-fee-scaled (/ (* y-difference (var-get liquidity-fees)) u10000))
+            (x-fee-scaled (if (> x-amount-added-scaled ideal-x-fee-scaled) ideal-x-fee-scaled x-amount-added-scaled))
+            (y-fee-scaled (if (> y-amount-added-scaled ideal-y-fee-scaled) ideal-y-fee-scaled y-amount-added-scaled))
+            (x-amount-added-updated-scaled (- x-amount-added-scaled x-fee-scaled))
+            (y-amount-added-updated-scaled (- y-amount-added-scaled y-fee-scaled))
+            (new-balance-x-post-fee-scaled (+ current-balance-x-scaled x-amount-added-updated-scaled))
+            (new-balance-y-post-fee-scaled (+ current-balance-y-scaled y-amount-added-updated-scaled))
+            (d2 (get-D new-balance-x-post-fee-scaled new-balance-y-post-fee-scaled current-amplification-coefficient))
+
+            ;; Scale down for precise token balance updates and transfers
+            (precise-fees (get-scaled-down-token-amounts x-fee-scaled y-fee-scaled x-decimals y-decimals))
+            (x-fee (get scaled-x precise-fees))
+            (y-fee (get scaled-y precise-fees))
             (x-amount-added-updated (- x-amount-added x-fee))
             (y-amount-added-updated (- y-amount-added y-fee))
             (new-balance-x-post-fee (+ current-balance-x x-amount-added-updated))
             (new-balance-y-post-fee (+ current-balance-y y-amount-added-updated))
-            (d2 (get-D new-balance-x-post-fee new-balance-y-post-fee current-amplification-coefficient))
-            (liquidity-provider tx-sender)
         )
 
         ;; Assert that pair is approved
@@ -746,15 +769,10 @@
 )
 
 ;; Scale up the token amounts to the same level of precision before performing AMM calculations
-;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-unscaled, y-amount-unscaled
-(define-private (get-scaled-up-token-amounts (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-unscaled uint) (y-amount-unscaled uint))
+;; @params: x-amount-unscaled: uint, y-amount-unscaled:uint, x-num-decimals: uint, y-num-decimals: uint
+(define-private (get-scaled-up-token-amounts (x-amount-unscaled uint) (y-amount-unscaled uint) (x-num-decimals uint) (y-num-decimals uint))
     (let 
         (
-            ;; (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
-            ;; (x-num-decimals (get x-decimals current-pair))
-            ;; (y-num-decimals (get y-decimals current-pair))
-            (x-num-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
-            (y-num-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
             (scaled-x 
                 ;; if same number of decimals, set to x-amount-unscaled
                 (if (is-eq x-num-decimals y-num-decimals)
@@ -772,21 +790,15 @@
                 )
             )
         )
-        (ok {scaled-x: scaled-x, scaled-y: scaled-y})
+        {scaled-x: scaled-x, scaled-y: scaled-y}
     )
 )
 
 ;; Scale down the token amounts to their respective levels of precision before performing any transfers
-;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-unscaled, y-amount-unscaled
-(define-private (get-scaled-down-token-amounts (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-scaled uint) (y-amount-scaled uint))
+;; @params: x-amount-scaled: uint, y-amount-scaled:uint, x-num-decimals: uint, y-num-decimals: uint
+(define-private (get-scaled-down-token-amounts (x-amount-scaled uint) (y-amount-scaled uint) (x-num-decimals uint) (y-num-decimals uint))
     (let 
         (
-            ;; (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
-            ;; (x-num-decimals (get x-decimals current-pair))
-            ;; (y-num-decimals (get y-decimals current-pair))
-            (x-num-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
-            (y-num-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
-        
             (scaled-x 
                 ;; if same number of decimals, set to x-amount-scaled
                 (if (is-eq x-num-decimals y-num-decimals)
@@ -804,7 +816,7 @@
                 )
             )
         )
-        (ok {scaled-x: scaled-x, scaled-y: scaled-y})
+        {scaled-x: scaled-x, scaled-y: scaled-y}
     )
 )
 
@@ -822,6 +834,11 @@
     (let 
         (
             (lp-owner tx-sender)
+            (x-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
+            (y-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
+            (scaled-up-balances (get-scaled-up-token-amounts initial-x-bal initial-y-bal x-decimals y-decimals))
+            (initial-x-bal-scaled (get scaled-x scaled-up-balances))
+            (initial-y-bal-scaled (get scaled-y scaled-up-balances))
         )
 
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
@@ -837,10 +854,10 @@
         (asserts! (or (> initial-x-bal u0) (> initial-y-bal u0)) (err "err-initial-bal-zero"))
 
         ;; Assert that x & y tokens are the same
-        (asserts! (is-eq initial-x-bal initial-y-bal) (err "err-initial-bal-odd"))
+        (asserts! (is-eq initial-x-bal-scaled initial-y-bal-scaled) (err "err-initial-bal-odd"))
 
         ;; Mint LP tokens to tx-sender
-        (unwrap! (as-contract (contract-call? .usda-susdt-lp-token mint lp-owner (+ initial-x-bal initial-y-bal))) (err "err-minting-lp-tokens"))
+        (unwrap! (as-contract (contract-call? .usda-susdt-lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
 
         ;; Transfer token x liquidity to this contract
         (unwrap! (contract-call? x-token transfer initial-x-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-x"))
@@ -852,11 +869,11 @@
         (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
             approval: true,
             total-shares: (+ initial-x-bal initial-y-bal),
-            x-decimals: (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")),
-            y-decimals: (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")),
+            x-decimals: x-decimals,
+            y-decimals: y-decimals,
             balance-x: initial-x-bal,
             balance-y: initial-y-bal,
-            d: (+ initial-x-bal initial-y-bal),
+            d: (+ initial-x-bal-scaled initial-y-bal-scaled),
             amplification-coefficient: amplification-coefficient,
         }))
     )
