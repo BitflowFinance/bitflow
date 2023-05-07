@@ -640,6 +640,16 @@
                 )
             )
         )
+        ;; ;; if x-fee > 0, transfer x-fee to protocol-address
+        ;; (if (> x-fee u0)
+        ;;     (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
+        ;;     false
+        ;; )
+        ;; ;; if y-fee > 0, transfer y-fee to protocol-address
+        ;; (if (> y-fee u0)
+        ;;     (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
+        ;;     false
+        ;; )
 
         ;; Mint LP tokens to tx-sender
         (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d2 d0)) d0))) (err "err-minting-lp-tokens"))
