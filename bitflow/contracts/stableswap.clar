@@ -256,15 +256,18 @@
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
             (swap-fee-lps (get lps (var-get swap-fees)))
-            (x-amount-fee-lps (/ (* x-amount swap-fee-lps) u10000))
             (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (x-amount-fee-lps (/ (* x-amount swap-fee-lps) u10000))
             (x-amount-fee-protocol (/ (* x-amount swap-fee-protocol) u10000))
-            (x-amount-fee-total (+ swap-fee-lps swap-fee-protocol))
+            (x-amount-fee-total (+ x-amount-fee-lps x-amount-fee-protocol))
             (updated-x-amount (- x-amount x-amount-fee-total))
             (updated-x-balance (+ current-balance-x updated-x-amount))
             (new-y (get-y updated-x-balance current-balance-y updated-x-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
             (dy (- current-balance-y new-y))
             (swapper tx-sender)
+            ;; As long as get-y converges, the stableswap invariant D should remain approximately the same.
+            (old-D (get d pair-data))
+            (new-D (get-D updated-x-balance new-y (* (get amplification-coefficient pair-data) number-of-tokens)))
         )
 
         ;; Assert that pair is approved
@@ -334,6 +337,7 @@
             {
                 balance-x: updated-x-balance,
                 balance-y: new-y,
+                d: new-D
             }
         ))
 
@@ -369,15 +373,19 @@
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
             (swap-fee-lps (get lps (var-get swap-fees)))
-            (y-amount-fee-lps (/ (* y-amount swap-fee-lps) u10000))
             (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (y-amount-fee-lps (/ (* y-amount swap-fee-lps) u10000))
             (y-amount-fee-protocol (/ (* y-amount swap-fee-protocol) u10000))
-            (y-amount-fee-total (+ swap-fee-lps swap-fee-protocol))
+            (y-amount-fee-total (+ y-amount-fee-lps y-amount-fee-protocol))
             (updated-y-amount (- y-amount y-amount-fee-total))
             (updated-y-balance (+ current-balance-y updated-y-amount))
             (new-x (get-x updated-y-balance current-balance-x updated-y-amount (* (get amplification-coefficient pair-data) number-of-tokens)))
             (dx (- current-balance-x new-x))
             (swapper tx-sender)
+            ;; As long as get-x converges, the stableswap invariant D should remain approximately the same.
+            (old-D (get d pair-data))
+            (new-D (get-D updated-y-balance new-x (* (get amplification-coefficient pair-data) number-of-tokens)))
+
         )
 
         ;; Assert that pair is approved
@@ -447,6 +455,7 @@
             {
                 balance-x: new-x,
                 balance-y: updated-y-balance,
+                d: new-D
             }
         ))
 
@@ -620,7 +629,8 @@
                 {
                     balance-x: new-balance-x-post-fee,
                     balance-y: new-balance-y-post-fee,
-                    total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0))
+                    total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0)),
+                    d: d2
                 }
             ))
         )
