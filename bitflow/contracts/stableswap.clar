@@ -240,7 +240,6 @@
             (x-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts x-amount-fees-lps-scaled u0 x-decimals y-decimals)))
             (x-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts x-amount-fees-protocol-scaled u0 x-decimals y-decimals)))
         )
-        ;; (ok {dy: dy, new-y: new-y, x-amount-fees-lps: x-amount-fee-lps, x-amount-fees-protocol: x-amount-fees-protocol})
         (ok dy)
     )
 )
@@ -432,7 +431,7 @@
 ;; Swap Y -> X
 ;; @desc: Swaps Y token for X token
 ;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
-(define-public (swap-y-for-x (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
+(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
             (swapper tx-sender)
