@@ -38,7 +38,7 @@
 ;; Map that tracks all staking data for a given principal
 (define-map StakerDataMap {x-token: principal, y-token: principal, lp-token: principal, user: principal} {
     cycles-staked: (list 12000 uint),
-    cycles-unstakeable: (list 12000 uint),
+    cycles-to-unstake: (list 12000 uint),
     total-currently-staked: uint
 })
 
@@ -68,34 +68,6 @@
 ;; Get user data at cycle
 (define-read-only (get-user-data-at-cycle (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (user principal) (cycle uint)) 
     (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: user, cycle: cycle})
-)
-
-;; Get cycle rewards
-(define-read-only (get-cycle-rewards (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycle uint)) 
-    (let 
-        (
-            (pair-data (unwrap! (contract-call? .stableswap get-pair-data x-token y-token lp-token) (err "err-no-pair-data")))
-            (cycle-data (unwrap! (contract-call? .stableswap get-cycle-data x-token y-token lp-token cycle) (err "err-no-cycle-data")))
-            (balance-x-fee (get cycle-fee-balance-x cycle-data))
-            (balance-y-fee (get cycle-fee-balance-y cycle-data))
-            (user-data (unwrap! (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: cycle}) (err "err-no-user-data")))
-            (total-lpt-staked (var-get total-lp-tokens-staked))
-            (user-lpt-staked (get lp-token-staked user-data))
-            (user-liquidity-pct 
-                (if (> total-lpt-staked u0) 
-                    (/ (* u1000 user-lpt-staked) total-lpt-staked)
-                    u0
-                )     
-            )
-            (user-x-rewards (/ (* user-liquidity-pct balance-x-fee) u1000))
-            (user-y-rewards (/ (* user-liquidity-pct balance-y-fee) u1000))
-        )
-
-        (ok {
-            x-token-reward: user-x-rewards,
-            y-token-reward: user-y-rewards,
-        })
-    )
 )
 
 ;; Claim staking rewards per cycle
@@ -147,7 +119,7 @@
         (
             (current-staker-data (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}))
             (current-cycles-staked (default-to (list ) (get cycles-staked current-staker-data)))
-            (current-cycles-unstakeable (default-to (list ) (get cycles-unstakeable current-staker-data)))
+            (current-cycles-to-unstake (default-to (list ) (get cycles-to-unstake current-staker-data)))
             (updated-helper-uint-to-filter (var-set helper-uint cycles))
             (filtered-null-list (filter filter-null-value reward-cycle-index))
             (current-cycle (contract-call? .stableswap get-current-cycle))
@@ -156,7 +128,7 @@
             (updated-helper-uint-list-current-cycles (var-set helper-uint-list current-cycles-staked))
             (next-cycles-not-in-current-cycles (filter filter-list next-cycles))
             (unstake-cycle (+ u1 (+ current-cycle cycles)))
-            (is-unstakeable-block-in-unstakeable-cycles (is-some (index-of current-cycles-unstakeable unstake-cycle)))
+            (is-unstakeable-block-in-unstakeable-cycles (is-some (index-of current-cycles-to-unstake unstake-cycle)))
             (current-all-staker-data (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle}))
         )
 
@@ -181,18 +153,18 @@
             ;; Staker already exists, update cycles-staked list
             (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} {
                 cycles-staked: (unwrap! (as-max-len? (concat current-cycles-staked next-cycles-not-in-current-cycles) u12000) (err "err-cycles-staked-overflow")),
-                cycles-unstakeable: (if is-unstakeable-block-in-unstakeable-cycles 
-                    ;; Unstakeable cycle already exists, don't update cycles-unstakeable list
-                    current-cycles-unstakeable
-                    ;; Unstakeable cycle doesn't exist, update cycles-unstakeable list
-                    (unwrap! (as-max-len? (concat current-cycles-unstakeable (list unstake-cycle)) u12000) (err "err-cycles-unstakeable-overflow"))
+                cycles-to-unstake: (if is-unstakeable-block-in-unstakeable-cycles 
+                    ;; Unstakeable cycle already exists, don't update cycles-to-unstake list
+                    current-cycles-to-unstake
+                    ;; Unstakeable cycle doesn't exist, update cycles-to-unstake list
+                    (unwrap! (as-max-len? (concat current-cycles-to-unstake (list unstake-cycle)) u12000) (err "err-cycles-to-unstake-overflow"))
                 ),
                 total-currently-staked: (+ amount (default-to u0 (get total-currently-staked current-staker-data)))
             })
             ;; Staker doesn't exist, create new staker
             (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} {
                 cycles-staked: next-cycles,
-                cycles-unstakeable: (list (+ (+ current-cycle current-cycle) cycles)),
+                cycles-to-unstake: (list (+ (+ current-cycle current-cycle) cycles)),
                 total-currently-staked: amount
             })
         )
@@ -445,11 +417,12 @@
             (current-cycle (contract-call? .stableswap get-current-cycle))
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
-            (current-cycles-to-unstake (get cycles-unstakeable current-staker-data))
+            (current-cycles-to-unstake (get cycles-to-unstake current-staker-data))
             (total-currently-staked (get total-currently-staked current-staker-data))
-            (unstake-data (fold fold-from-all-cycles-to-unstakeable-cycles current-cycles-to-unstake {x-token: x-token, y-token: y-token, lp-token: lp-token, total-lps-to-unstake: u0, total-currently-staked: total-currently-staked, current-cycles-to-unstake: current-cycles-to-unstake}))
+            (total-lps-staked-in-contract (var-get total-lp-tokens-staked))
+            (unstake-data (fold fold-from-all-cycles-to-unstakeable-cycles current-cycles-to-unstake {x-token: x-token, y-token: y-token, lp-token: lp-token, total-lps-to-unstake: u0, current-cycles-to-unstake: current-cycles-to-unstake}))
             (lp-tokens-to-unstake (get total-lps-to-unstake unstake-data))
-            (updated-total-currently-staked (get total-currently-staked unstake-data))
+            (updated-total-currently-staked (- total-currently-staked lp-tokens-to-unstake))
             (updated-current-cycles-to-unstake (get current-cycles-to-unstake unstake-data))
         )
 
@@ -457,23 +430,24 @@
         (asserts! (is-ok (contract-call? lp-token transfer lp-tokens-to-unstake (as-contract tx-sender) tx-sender none)) (err "err-failed-to-transfer-lp-tokens"))
         (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} (merge 
             current-staker-data
-            {total-currently-staked: updated-total-currently-staked, cycles-unstakeable: updated-current-cycles-to-unstake}
+            {total-currently-staked: updated-total-currently-staked, cycles-to-unstake: updated-current-cycles-to-unstake}
         ))
+        ;; Updating the total balance of LP tokens staked in this contract
+        (var-set total-lp-tokens-staked (- total-lps-staked-in-contract lp-tokens-to-unstake))
         (ok lp-tokens-to-unstake)
 
     )
 )
 
-(define-private (fold-from-all-cycles-to-unstakeable-cycles (cycle uint) (fold-data {x-token: <sip-010-trait>, y-token: <sip-010-trait>, lp-token: <sip-010-trait>, total-lps-to-unstake: uint, total-currently-staked: uint, current-cycles-to-unstake: (list 12000 uint)})) 
+(define-private (fold-from-all-cycles-to-unstakeable-cycles (cycle uint) (fold-data {x-token: <sip-010-trait>, y-token: <sip-010-trait>, lp-token: <sip-010-trait>, total-lps-to-unstake: uint, current-cycles-to-unstake: (list 12000 uint)})) 
     (let 
         (
             (current-cycle (contract-call? .stableswap get-current-cycle))
             (current-total-lp-tokens-to-unstake (get total-lps-to-unstake fold-data))
             (static-x-token (get x-token fold-data))
             (static-y-token (get y-token fold-data))
-            (current-cycles-to-unstake (get current-cycles-to-unstake fold-data))
-            (total-currently-staked (get total-currently-staked fold-data))
             (static-lp-token (get lp-token fold-data))
+            (current-cycles-to-unstake (get current-cycles-to-unstake fold-data))
             (param-cycle-user-data (match (map-get? StakerDataPerCycleMap {x-token: (contract-of static-x-token), y-token: (contract-of static-y-token), lp-token: (contract-of static-lp-token), user: tx-sender, cycle: cycle}) 
                 ;; StakerDataPerCycleMap entry exists, save it to param-cycle-user-data
                 unwrapped-value
@@ -490,7 +464,7 @@
 
         )
 
-        (if (> param-cycle-user-lp-tokens-to-unstake u0)
+        (if (and (> param-cycle-user-lp-tokens-to-unstake u0) (<= cycle current-cycle))
             ;; There are lp-tokens to unstake
             (begin 
                 ;; Update StakerDataPerCycleMap with lp-token-to-unstake = u0
@@ -498,7 +472,7 @@
                     param-cycle-user-data
                     {lp-token-to-unstake: u0}
                 ))
-                {x-token: static-x-token, y-token: static-y-token, lp-token: static-lp-token, total-lps-to-unstake: (+ param-cycle-user-lp-tokens-to-unstake current-total-lp-tokens-to-unstake), total-currently-staked: (- total-currently-staked param-cycle-user-lp-tokens-to-unstake), current-cycles-to-unstake: updated-cycles-to-unstake}
+                {x-token: static-x-token, y-token: static-y-token, lp-token: static-lp-token, total-lps-to-unstake: (+ param-cycle-user-lp-tokens-to-unstake current-total-lp-tokens-to-unstake), current-cycles-to-unstake: updated-cycles-to-unstake}
             )
             ;; There are no rewards to claim
             fold-data
