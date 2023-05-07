@@ -78,6 +78,34 @@ Clarinet.test({
 
 // Test swap x for y
 Clarinet.test({
+    name: "Ensure we can swap x-token for y-token small amount",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(100000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(100000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000), types.uint(10000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10), types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectBool(true)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test swap x for y
+Clarinet.test({
     name: "Ensure we can swap x-token for y-token",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         const deployer = accounts.get("deployer")!;
@@ -525,6 +553,34 @@ Clarinet.test({
 
 // Test swap y for x
 Clarinet.test({
+    name: "Ensure we can swap x-token for y-token small amount",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(100000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(100000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000), types.uint(10000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10), types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectBool(true)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test swap y for x
+Clarinet.test({
     name: "Ensure we can swap y-token for x-token",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         const deployer = accounts.get("deployer")!;
@@ -745,3 +801,32 @@ Clarinet.test({
 ///////////////// ADD-LIQUIDITY /////////////////
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
+
+
+// Test add liquidity 
+Clarinet.test({
+    name: "Ensure we can add liquidity to a pool",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(500000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(500000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(100000000000), types.uint(100000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "add-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000000000), types.uint(100000000000), types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk()
+        console.log(JSON.stringify(block.receipts));
+    },
+});
