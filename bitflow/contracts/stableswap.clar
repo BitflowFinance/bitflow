@@ -617,10 +617,12 @@
             (precise-fees (get-scaled-down-token-amounts x-fee-scaled y-fee-scaled x-decimals y-decimals))
             (x-fee (get scaled-x precise-fees))
             (y-fee (get scaled-y precise-fees))
-            (x-amount-added-updated (- x-amount-added x-fee))
-            (y-amount-added-updated (- y-amount-added y-fee))
-            (new-balance-x-post-fee (+ current-balance-x x-amount-added-updated))
-            (new-balance-y-post-fee (+ current-balance-y y-amount-added-updated))
+            (amounts-added-scaled-down (get-scaled-down-token-amounts x-amount-added-updated-scaled y-amount-added-updated-scaled x-decimals y-decimals))
+            (x-amount-added-updated (get scaled-x amounts-added-scaled-down))
+            (y-amount-added-updated (get scaled-y amounts-added-scaled-down))
+            (balances-post-fee-scaled-down (get-scaled-down-token-amounts new-balance-x-post-fee-scaled new-balance-y-post-fee-scaled x-decimals y-decimals))
+            (new-balance-x-post-fee (get scaled-x balances-post-fee-scaled-down))
+            (new-balance-y-post-fee (get scaled-y balances-post-fee-scaled-down))
         )
 
         ;; Assert that pair is approved
@@ -959,7 +961,7 @@
         ;; Update all appropriate maps
         (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
             approval: true,
-            total-shares: (+ initial-x-bal initial-y-bal),
+            total-shares: (+ initial-x-bal-scaled initial-y-bal-scaled),
             x-decimals: x-decimals,
             y-decimals: y-decimals,
             balance-x: initial-x-bal,
