@@ -460,10 +460,10 @@
             ;; Scale down to precise amounts for y and dy, as well as y-amount-fee-lps, and y-amount-fee-protocol
             (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
             (dx (- current-balance-x new-x))
-            (y-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
-            (y-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled y-decimals x-decimals)))
+            (y-amount-fee-lps (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
+            (y-amount-fee-protocol (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled x-decimals y-decimals)))
             (updated-y-amount (- y-amount (+ y-amount-fee-lps y-amount-fee-protocol)))
-            (updated-y-balance (+ current-balance-x updated-y-amount))
+            (updated-y-balance (+ current-balance-y updated-y-amount))
         )
 
         ;; Assert that pair is approved
@@ -479,7 +479,7 @@
 
             (begin
                 ;; Transfer updated-y-balance tokens from tx-sender to this contract
-                (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y-updated-amount"))
+                (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
                 ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
                 (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-y-swap-fee"))
@@ -494,7 +494,7 @@
             (if (and (is-eq y-amount-fee-lps u0) (is-eq y-amount-fee-protocol u0)) 
                 (begin
                     ;; Transfer updated-y-balance tokens from tx-sender to this contract
-                    (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y-updated-amount"))
+                    (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
                     ;; Transfer dx tokens from this contract to tx-sender
                     (unwrap! (as-contract (contract-call? x-token transfer dx tx-sender swapper none)) (err "err-transferring-token-x"))
@@ -502,7 +502,7 @@
                 (if (and (> y-amount-fee-lps u0) (is-eq y-amount-fee-protocol u0))
                     (begin
                         ;; Transfer updated-y-balance tokens from tx-sender to this contract
-                        (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y-updated-amount"))
+                        (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
                         ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
                         (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-y-swap-fee"))
