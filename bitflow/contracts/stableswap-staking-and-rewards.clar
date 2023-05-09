@@ -174,7 +174,7 @@
             ;; Staker doesn't exist, create new staker
             (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} {
                 cycles-staked: next-cycles,
-                cycles-to-unstake: (list (+ (+ current-cycle current-cycle) cycles)),
+                cycles-to-unstake: (list unstake-cycle),
                 total-currently-staked: amount
             })
         )
@@ -188,15 +188,15 @@
         )
 
         ;; Update unstakeable lp-token StakerDataMap
-        (ok (if (is-some (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: current-cycle}))
+        (ok (if (is-some (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle}))
             ;; Staker already exists, only update lp-token-to-unstake
-            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: current-cycle} (merge 
-                (default-to { lp-token-staked: u0, reward-claimed: false, lp-token-to-unstake: u0} (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: current-cycle}))
-                {lp-token-to-unstake: (+ amount (default-to u0 (get lp-token-to-unstake (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: current-cycle}))))}
+            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle} (merge 
+                (default-to { lp-token-staked: u0, reward-claimed: false, lp-token-to-unstake: u0} (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle}))
+                {lp-token-to-unstake: (+ amount (default-to u0 (get lp-token-to-unstake (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle}))))}
             ))
             ;; Staker doesn't exist, create new entry
-            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: current-cycle} { 
-                lp-token-staked: amount, 
+            (map-set StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle} { 
+                lp-token-staked: u0, 
                 reward-claimed: false, 
                 lp-token-to-unstake: amount
             })
@@ -424,6 +424,7 @@
 (define-public (unstake-all-lp-tokens (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>))
     (let 
         (
+            (liquidity-provider tx-sender)
             (current-cycle (contract-call? .stableswap get-current-cycle))
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
@@ -437,7 +438,10 @@
         )
 
         (asserts! (> lp-tokens-to-unstake u0) (err "err-no-lp-tokens-to-unstake"))
-        (asserts! (is-ok (contract-call? lp-token transfer lp-tokens-to-unstake (as-contract tx-sender) tx-sender none)) (err "err-failed-to-transfer-lp-tokens"))
+        
+        ;; Transfer LP tokens to unstake from the contract to the user
+        (unwrap! (as-contract (contract-call? lp-token transfer lp-tokens-to-unstake tx-sender liquidity-provider none)) (err "err-failed-to-transfer-lp-tokens"))
+        
         (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} (merge 
             current-staker-data
             {total-currently-staked: updated-total-currently-staked, cycles-to-unstake: updated-current-cycles-to-unstake}
