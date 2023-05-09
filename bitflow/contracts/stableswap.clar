@@ -95,8 +95,8 @@
 )
 
 ;; Get cycle data
-(define-read-only (get-cycle-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycle-num uint)) 
-    (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: cycle-num})
+(define-read-only (get-cycle-data (x-token principal) (y-token principal) (lp-token principal) (cycle-num uint)) 
+    (map-get? CycleDataMap {x-token: x-token, y-token: y-token, lp-token: lp-token, cycle-num: cycle-num})
 )
 
 ;; Get current cycle
