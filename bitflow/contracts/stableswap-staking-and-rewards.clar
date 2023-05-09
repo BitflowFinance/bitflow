@@ -141,7 +141,7 @@
             (is-unstakeable-block-in-unstakeable-cycles (is-some (index-of current-cycles-to-unstake unstake-cycle)))
             (current-all-staker-data (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle}))
             (pair-data (unwrap! (contract-call? .stableswap get-pair-data x-token y-token lp-token) (err "err-no-pair-data")))
-            (total-currently-staked-data (unwrap! (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-total-staked-per-pair-data")))
+            (total-currently-staked-data (default-to {total-staked: u0} (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})))
             (total-currently-staked-in-contract (get total-staked total-currently-staked-data))
             (approved-pair (get approval pair-data))
         )
