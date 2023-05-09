@@ -207,7 +207,7 @@
 
 ;; Helper filter function to filter out null values lower than helper-uint var
 (define-private (filter-null-value (value uint)) 
-    (if (< value (var-get helper-uint)) 
+    (if (<= value (var-get helper-uint)) 
         true
         false
     )
@@ -342,7 +342,7 @@
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-staked (get cycles-staked current-staker-data))
-            (rewards-to-claim (fold fold-from-all-cycles-to-cycles-unclaim current-cycles-staked {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-rewards-x: u0, total-rewards-y: u0}))
+            (rewards-to-claim (fold fold-from-all-cycles-to-cycles-unclaimed current-cycles-staked {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-rewards-x: u0, total-rewards-y: u0}))
             (rewards-to-claim-x (get total-rewards-x rewards-to-claim))
             (rewards-to-claim-y (get total-rewards-y rewards-to-claim))
         )
@@ -371,7 +371,7 @@
 
 ;; Helper function to map from all cycles staked to all cycles unclaimed
 ;; The below needs to be a fold, not a map, so that we don't have to transfer every iteration for rather at the end
-(define-private (fold-from-all-cycles-to-cycles-unclaim (cycle uint) (fold-data {x-token: principal, y-token: principal, lp-token: principal, total-rewards-x: uint, total-rewards-y: uint})) 
+(define-private (fold-from-all-cycles-to-cycles-unclaimed (cycle uint) (fold-data {x-token: principal, y-token: principal, lp-token: principal, total-rewards-x: uint, total-rewards-y: uint})) 
     (let 
         (
             (static-x-token (get x-token fold-data))
