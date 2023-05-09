@@ -188,14 +188,6 @@
             })
         )
 
-        ;; Update DataPerCycleMap
-        (if (is-some current-all-staker-data)
-            ;; Cycle data already exists, update total-lp-token-staked
-            (map-set DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle} (+ amount (default-to u0 current-all-staker-data)))
-            ;; Staker doesn't exist, create new entry
-            (map-set DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle} amount)
-        )
-
         ;; Update unstakeable lp-token StakerDataMap
         (ok (if (is-some (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender, cycle: unstake-cycle}))
             ;; Staker already exists, only update lp-token-to-unstake
@@ -256,6 +248,7 @@
             (current-cycle-lp-token-staked (get lp-token-staked current-cycle-user-data))
             (current-cycle-lp-token-to-unstake (get lp-token-to-unstake current-cycle-user-data))
             (current-cycle-reward-claimed (get reward-claimed current-cycle-user-data))
+            (current-all-staker-data (map-get? DataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, cycle: next-cycle}))
         )
         ;; Check if staker is already staked in this cycle
         (if (is-some (index-of cycles-staked-static next-cycle))
@@ -271,6 +264,14 @@
                 lp-token-to-unstake: u0
             })
         )
+        ;; Update DataPerCycleMap
+        (if (is-some current-all-staker-data)
+            ;; Cycle data already exists, update total-lp-token-staked
+            (map-set DataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, cycle: next-cycle} (+ amount-static (default-to u0 current-all-staker-data)))
+            ;; Staker doesn't exist, create new entry
+            (map-set DataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, cycle: next-cycle} amount-static)
+        )
+
         static-user-and-cycle-data
     )
 )
