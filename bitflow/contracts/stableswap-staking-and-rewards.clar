@@ -258,11 +258,12 @@
                     {lp-token-staked: (+ amount-static current-cycle-lp-token-staked)}
             ))
             ;; Staker is not already staked in this cycle, create new StakerDataPerCycleMap
-            (map-set StakerDataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, user: tx-sender, cycle: next-cycle} {
+            (map-set StakerDataPerCycleMap {x-token: x-token-static, y-token: y-token-static, lp-token: lp-token-static, user: tx-sender, cycle: next-cycle} (merge 
+                    current-cycle-user-data
+            {
                 lp-token-staked: amount-static,
                 reward-claimed: false,
-                lp-token-to-unstake: u0
-            })
+            }))
         )
         ;; Update DataPerCycleMap
         (if (is-some current-all-staker-data)
@@ -355,27 +356,29 @@
             (rewards-to-claim (fold fold-from-all-cycles-to-cycles-unclaimed current-cycles-staked {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-rewards-x: u0, total-rewards-y: u0}))
             (rewards-to-claim-x (get total-rewards-x rewards-to-claim))
             (rewards-to-claim-y (get total-rewards-y rewards-to-claim))
+            (claimer tx-sender)
         )
 
         ;; Check if one of the param-cycle-x or param-cycle-y rewards is equal to 0
         (ok (if (or (is-eq rewards-to-claim-x u0) (is-eq rewards-to-claim-y u0))
-            ;; One of them is equal to 0, only transfer the other
-            (if (is-eq rewards-to-claim-x u0)
-                ;; param-cycle-x-rewards is equal to 0, transfer param-cycle-y-rewards from contract to user
-                (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y tx-sender tx-sender none)) (err "err-y-token-transfer-failed"))
-                ;; param-cycle-y-rewards is equal to 0, transfer param-cycle-x-rewards from contract to user
-                (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x tx-sender tx-sender none)) (err "err-x-token-transfer-failed"))
-            )
-            ;; Neither of them are equal to 0, transfer both
-            (begin 
-                
-                ;; Transfer param-cycle-x-rewards from contract to user
-                (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x tx-sender tx-sender none)) (err "err-x-token-transfer-failed"))
+                ;; One of them is equal to 0, only transfer the other
+                (if (is-eq rewards-to-claim-x u0)
+                    ;; param-cycle-x-rewards is equal to 0, transfer param-cycle-y-rewards from contract to user
+                    (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y tx-sender claimer none)) (err "err-y-token-transfer-failed"))
+                    ;; param-cycle-y-rewards is equal to 0, transfer param-cycle-x-rewards from contract to user
+                    (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x tx-sender claimer none)) (err "err-x-token-transfer-failed"))
+                )
+                ;; Neither of them are equal to 0, transfer both
+                (begin 
+                    
+                    ;; Transfer param-cycle-x-rewards from contract to user
+                    (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x tx-sender claimer none)) (err "err-x-token-transfer-failed"))
 
-                ;; Transfer param-cycle-y-rewards from contract to user
-                (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y tx-sender tx-sender none)) (err "err-y-token-transfer-failed"))
+                    ;; Transfer param-cycle-y-rewards from contract to user
+                    (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y tx-sender claimer none)) (err "err-y-token-transfer-failed"))
+                )
             )
-        ))
+        )
     )
 )
 
