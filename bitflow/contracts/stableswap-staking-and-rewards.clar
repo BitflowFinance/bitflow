@@ -21,8 +21,6 @@
 ;; Variables ;;
 ;;;;;;;;;;;;;;;
 
-;; Total lp tokens staked
-(define-data-var total-lp-tokens-staked uint u0)
 
 ;; Helper uint for filtering out null values & mapping from index to next cycle
 (define-data-var helper-uint uint u0)
@@ -52,6 +50,8 @@
 ;; Map that tracks staking data per cycle for all stakers
 (define-map DataPerCycleMap {x-token: principal, y-token: principal, lp-token: principal, cycle: uint} uint)
 
+;; Map that tracks the total LP tokens currently staked by everyone for a given pair
+(define-map TotalStakedPerPairMap {x-token: principal, y-token: principal, lp-token: principal} {total-staked: uint})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,6 +73,11 @@
 ;; Get user data at cycle
 (define-read-only (get-data-at-cycle (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle uint)) 
     (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: cycle})
+)
+
+;; Get total LP tokens staked for a given pair
+(define-read-only (get-total-staked (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>)) 
+    (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
 )
 
 ;; Claim staking rewards per cycle
@@ -136,6 +141,8 @@
             (is-unstakeable-block-in-unstakeable-cycles (is-some (index-of current-cycles-to-unstake unstake-cycle)))
             (current-all-staker-data (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle}))
             (pair-data (unwrap! (contract-call? .stableswap get-pair-data x-token y-token lp-token) (err "err-no-pair-data")))
+            (total-currently-staked-data (unwrap! (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-total-staked-per-pair-data")))
+            (total-currently-staked-in-contract (get total-staked total-currently-staked-data))
             (approved-pair (get approval pair-data))
         )
 
@@ -154,10 +161,12 @@
         ;; Transfer LP tokens from user to contract
         (unwrap! (contract-call? lp-token transfer amount tx-sender (as-contract tx-sender) none) (err "err-lp-token-transfer-failed"))
 
-        ;; Update total-lp-tokens-staked
+        ;; Update lp-tokens-staked in the appropriate cycles
         (fold update-staker-data-per-cycle-fold next-cycles {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycles-staked: current-cycles-staked, amount: amount})
 
-        ;; Update staker data
+        ;; Updating the total balance of LP tokens staked in this contract
+        (map-set TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: (+ total-currently-staked-in-contract amount)})
+
         ;; Update StakerDataMap
         (if (is-some current-staker-data)
             ;; Staker already exists, update cycles-staked list
@@ -429,11 +438,11 @@
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-to-unstake (get cycles-to-unstake current-staker-data))
-            (total-currently-staked (get total-currently-staked current-staker-data))
-            (total-lps-staked-in-contract (var-get total-lp-tokens-staked))
+            (total-currently-staked-data (unwrap! (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-total-staked-per-pair")))
+            (total-currently-staked-in-contract (get total-staked total-currently-staked-data))
             (unstake-data (fold fold-from-all-cycles-to-unstakeable-cycles current-cycles-to-unstake {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-lps-to-unstake: u0, current-cycles-to-unstake: current-cycles-to-unstake}))
             (lp-tokens-to-unstake (get total-lps-to-unstake unstake-data))
-            (updated-total-currently-staked (- total-currently-staked lp-tokens-to-unstake))
+            (updated-total-currently-staked (- total-currently-staked-in-contract lp-tokens-to-unstake))
             (updated-current-cycles-to-unstake (get current-cycles-to-unstake unstake-data))
         )
 
@@ -447,7 +456,7 @@
             {total-currently-staked: updated-total-currently-staked, cycles-to-unstake: updated-current-cycles-to-unstake}
         ))
         ;; Updating the total balance of LP tokens staked in this contract
-        (var-set total-lp-tokens-staked (- total-lps-staked-in-contract lp-tokens-to-unstake))
+        (map-set TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: (- total-currently-staked-in-contract lp-tokens-to-unstake)})
         (ok lp-tokens-to-unstake)
 
     )
