@@ -66,7 +66,7 @@
 
 (define-public (mint (who principal) (amount uint))
   (begin
-    (asserts! (is-eq contract-caller .stableswap) ERR-UNAUTHORIZED-MINT)
+    (asserts! (is-eq contract-caller (var-get approved-minter)) ERR-UNAUTHORIZED-MINT)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-mint? usda-susdt-lp amount who)

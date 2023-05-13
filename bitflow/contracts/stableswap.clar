@@ -20,9 +20,6 @@
 ;; This contract address
 (define-constant this-contract (as-contract tx-sender))
 
-;; Fee escrow contract address
-(define-constant staking-and-rewards-contract .stableswap-staking-and-rewards)
-
 ;; Deployment height
 (define-constant deployment-height block-height)
 
@@ -38,6 +35,11 @@
 ;; Test Protocol Address
 (define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 
+;; Convergence Threshold Constant
+(define-constant convergence-threshold u2)
+
+;; Contract for Stableswap Staking and Rewards
+(define-data-var staking-and-rewards-contract principal .stableswap-staking-and-rewards)
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -56,9 +58,6 @@
 
 ;; Liquidity Fees (3% initialized, all 3% to protocol)
 (define-data-var liquidity-fees uint u3)
-
-;; Test Different Constant
-(define-constant test-constant u2)
 
 
 ;;;;;;;;;;
@@ -190,11 +189,11 @@
 
         (if (is-eq current-converged u0)
             (if (> new-x  current-x)
-                (if (<= (- new-x current-x) test-constant)
+                (if (<= (- new-x current-x) convergence-threshold)
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
-                (if (<= (- current-x new-x) test-constant)
+                (if (<= (- current-x new-x) convergence-threshold)
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
@@ -276,11 +275,11 @@
 
         (if (is-eq current-converged u0)
             (if (> new-y  current-y)
-                (if (<= (- new-y current-y) test-constant)
+                (if (<= (- new-y current-y) convergence-threshold)
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: new-y}
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
-                (if (<= (- current-y new-y) test-constant)
+                (if (<= (- current-y new-y) convergence-threshold)
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: new-y}
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
@@ -353,7 +352,7 @@
                 (unwrap! (contract-call? x-token transfer updated-x-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-x"))
 
                 ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
-                (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-x-fee"))
+                (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-x-fee"))
 
                 ;; Transfer x-amount-fee-protocol tokens from tx-sender to protocol-address
                 (unwrap! (contract-call? x-token transfer x-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-x-fee-protocol"))
@@ -376,7 +375,7 @@
                         (unwrap! (contract-call? x-token transfer updated-x-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-x"))
 
                         ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
-                        (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-x-fee"))
+                        (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-x-fee"))
 
                         ;; Transfer dy tokens from this contract to tx-sender
                         (unwrap! (as-contract (contract-call? y-token transfer dy tx-sender swapper none)) (err "err-transferring-token-y")) 
@@ -482,7 +481,7 @@
                 (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
                 ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
-                (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-y-swap-fee"))
+                (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-y-swap-fee"))
 
                 ;; Transfer y-amount-fee-protocol tokens from tx-sender to protocol-address
                 (unwrap! (contract-call? y-token transfer y-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-y-protocol-fee"))
@@ -505,7 +504,7 @@
                         (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
                         ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
-                        (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper staking-and-rewards-contract none) (err "err-transferring-token-y-swap-fee"))
+                        (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-y-swap-fee"))
 
                         ;; Transfer dx tokens from this contract to tx-sender
                         (unwrap! (as-contract (contract-call? x-token transfer dx tx-sender swapper none)) (err "err-transferring-token-x"))
@@ -846,11 +845,11 @@
         ;; Check if converged value / new D was already found
         (if (is-eq current-converged u0)
             (if (> new-D  current-D)
-                (if (<= (- new-D current-D) test-constant)
+                (if (<= (- new-D current-D) convergence-threshold)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
-                (if (<= (- current-D new-D) test-constant)
+                (if (<= (- current-D new-D) convergence-threshold)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
@@ -1039,5 +1038,21 @@
                 amplification-coefficient: amplification-coefficient
             }
         )))
+    )
+)
+
+;; Admins can set the contract for handling staking and rewards
+;; @params: staking-contract: principal
+(define-public (set-staking-contract (staking-contract principal))
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Set contract for handling staking and rewards
+        (ok (var-set staking-and-rewards-contract staking-contract))
     )
 )
