@@ -949,7 +949,7 @@
         (asserts! (is-eq initial-x-bal-scaled initial-y-bal-scaled) (err "err-initial-bal-odd"))
 
         ;; Mint LP tokens to tx-sender
-        (unwrap! (as-contract (contract-call? .usda-susdt-lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
+        (unwrap! (as-contract (contract-call? lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
 
         ;; Transfer token x liquidity to this contract
         (unwrap! (contract-call? x-token transfer initial-x-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-x"))
