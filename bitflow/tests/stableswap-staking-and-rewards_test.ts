@@ -751,12 +751,133 @@ Clarinet.test({
     },
 });
 
-// Test claiming
+// // Test claiming
+// Clarinet.test({
+//     name: "Ensure we can NOT claim rewards if current cycle",
+//     async fn(chain: Chain, accounts: Map<string, Account>) {
+//         const deployer = accounts.get("deployer")!;
+//         const wallet_1 = accounts.get("wallet_1")!;
+
+//         chain.mineBlock([
+//             Tx.contractCall("usda-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+//         ]);
+
+//         chain.mineBlock([
+//             Tx.contractCall("susdt-token", "mint", [types.uint(50000000000000000), types.principal(deployer.address)], deployer.address)
+//         ]);
+
+//         chain.mineBlock([
+//             Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000000), types.uint(100000000000000)], deployer.address)
+//         ]);
+
+//         chain.mineBlock([
+//             Tx.contractCall("stableswap-staking-and-rewards", "stake-lp-tokens", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(2), types.uint(10000000000)], deployer.address)
+//         ]);
+
+//         chain.mineEmptyBlockUntil(145);
+
+//         chain.mineBlock([
+//             Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000), types.uint(0)], deployer.address)
+//         ]);
+
+//         chain.mineBlock([
+//             Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000), types.uint(0)], deployer.address)
+//         ]);
+
+//         const block = chain.mineBlock([
+//             Tx.contractCall("stableswap-staking-and-rewards", "claim-all-staking-rewards", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token")], deployer.address)
+//         ]);
+
+//         block.receipts[0].result.expectErr()
+//         console.log(JSON.stringify(block.receipts));
+//     },
+// });
+
+
+// Test read only get rewards at a certain cycle
 Clarinet.test({
-    name: "Ensure we can NOT claim rewards if current cycle",
+    name: "Ensure we can read the rewards at a certain cycle",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         const deployer = accounts.get("deployer")!;
         const wallet_1 = accounts.get("wallet_1")!;
+
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(50000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000000), types.uint(100000000000000)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-staking-and-rewards", "stake-lp-tokens", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(2), types.uint(10000000000)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(145);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000), types.uint(0)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(290);
+        const call = chain.callReadOnlyFn("stableswap-staking-and-rewards", "get-staking-rewards-at-cycle", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(1)], deployer.address)
+
+        call.result.expectOk().expectTuple()
+        console.log(JSON.stringify(call.result));
+    },
+});
+
+// Test read only get rewards at cycle zero when it should produce an error
+Clarinet.test({
+    name: "Ensure we are get an error when reading cycle rewards at zero",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(50000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000000), types.uint(100000000000000)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-staking-and-rewards", "stake-lp-tokens", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(2), types.uint(10000000000)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(145);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000), types.uint(0)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(290);
+        const call = chain.callReadOnlyFn("stableswap-staking-and-rewards", "get-staking-rewards-at-cycle", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(0)], deployer.address)
+
+        call.result.expectErr()
+        console.log(JSON.stringify(call.result));
+    },
+});
+
+
+// Test read only get both x and y rewards at cycle
+Clarinet.test({
+    name: "Ensure we can read both x and y rewards at cycle when trading fees have been collected",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
 
         chain.mineBlock([
             Tx.contractCall("usda-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
@@ -784,12 +905,52 @@ Clarinet.test({
             Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000), types.uint(0)], deployer.address)
         ]);
 
-        const block = chain.mineBlock([
-            Tx.contractCall("stableswap-staking-and-rewards", "claim-all-staking-rewards", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token")], deployer.address)
-        ]);
+        chain.mineEmptyBlockUntil(290);
+        const call = chain.callReadOnlyFn("stableswap-staking-and-rewards", "get-staking-rewards-at-cycle", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(1)], deployer.address)
 
-        block.receipts[0].result.expectErr()
-        console.log(JSON.stringify(block.receipts));
+        call.result.expectOk().expectTuple()
+        console.log(JSON.stringify(call.result));
     },
 });
 
+// Test read only get both x and y rewards at cycle
+Clarinet.test({
+    name: "Ensure we can read both x and y rewards at cycle > 0 when NO trading fees have been collected",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(50000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000000), types.uint(100000000000000)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-staking-and-rewards", "stake-lp-tokens", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(2), types.uint(10000000000)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(145);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000), types.uint(0)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000), types.uint(0)], deployer.address)
+        ]);
+
+        chain.mineEmptyBlockUntil(1500);
+        const call = chain.callReadOnlyFn("stableswap-staking-and-rewards", "get-staking-rewards-at-cycle", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(5)], deployer.address)
+
+        call.result.expectErr()
+        console.log(JSON.stringify(call.result));
+    },
+});

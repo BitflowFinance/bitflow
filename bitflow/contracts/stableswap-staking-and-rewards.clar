@@ -84,7 +84,7 @@
 (define-read-only (get-staking-rewards-at-cycle (x-token principal) (y-token principal) (lp-token principal) (cycle uint))
     (let 
         (
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            ;; (current-cycle (contract-call? .stableswap get-current-cycle))
             (param-cycle-user-data (unwrap! (map-get? StakerDataPerCycleMap {x-token: x-token, y-token: y-token, lp-token: lp-token, user: tx-sender, cycle: cycle}) (err u4)))
             (param-cycle-reward-claimed (get reward-claimed param-cycle-user-data))
             (param-cycle-user-lp-staked (get lp-token-staked param-cycle-user-data))
@@ -102,9 +102,6 @@
 
         ;; Assert that param-cycle-reward-claimed is false
         (asserts! (not param-cycle-reward-claimed) (err u2))
-
-        ;; Assert that claiming from a previous cycle
-        (asserts! (< cycle current-cycle) (err u3))
 
         (ok {x-token-reward: param-cycle-x-rewards, y-token-reward: param-cycle-y-rewards})
     )
@@ -353,7 +350,7 @@
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-staked (get cycles-staked current-staker-data))
-            (rewards-to-claim (fold fold-from-all-cycles-to-cycles-unclaimed current-cycles-staked {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-rewards-x: u0, total-rewards-y: u0}))
+            (rewards-to-claim (fold fold-from-all-cycles-to-cycles-unclaimed current-cycles-staked {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-rewards-x: u0, total-rewards-y: u0, current-cycle: current-cycle}))
             (rewards-to-claim-x (get total-rewards-x rewards-to-claim))
             (rewards-to-claim-y (get total-rewards-y rewards-to-claim))
             (claimer tx-sender)
@@ -384,32 +381,36 @@
 
 ;; Helper function to map from all cycles staked to all cycles unclaimed
 ;; The below needs to be a fold, not a map, so that we don't have to transfer every iteration for rather at the end
-(define-private (fold-from-all-cycles-to-cycles-unclaimed (cycle uint) (fold-data {x-token: principal, y-token: principal, lp-token: principal, total-rewards-x: uint, total-rewards-y: uint})) 
+(define-private (fold-from-all-cycles-to-cycles-unclaimed (cycle uint) (fold-data {x-token: principal, y-token: principal, lp-token: principal, total-rewards-x: uint, total-rewards-y: uint, current-cycle: uint})) 
     (let 
         (
+            (static-current-cycle (get current-cycle fold-data))
             (static-x-token (get x-token fold-data))
             (static-y-token (get y-token fold-data))
             (static-lp-token (get lp-token fold-data))
             (current-total-rewards-x (get total-rewards-x fold-data))
             (current-total-rewards-y (get total-rewards-y fold-data))
-            (current-cycle-staking-rewards (get-staking-rewards-at-cycle static-x-token static-y-token static-lp-token cycle))
-            (current-cycle-rewards-x (match current-cycle-staking-rewards 
+            (param-cycle-staking-rewards (get-staking-rewards-at-cycle static-x-token static-y-token static-lp-token cycle))
+            (param-cycle-rewards-x (match param-cycle-staking-rewards 
                 ok-branch
                     (get x-token-reward ok-branch)
                 err-branch
                     u0
             ))
-            (current-cycle-rewards-y (match current-cycle-staking-rewards 
+            (param-cycle-rewards-y (match param-cycle-staking-rewards 
                 ok-branch
                     (get y-token-reward ok-branch)
                 err-branch
                     u0
             ))
-            ;;(current-cycle-rewards-y (get y-token-reward (unwrap! current-cycle-staking-rewards fold-data)))
+            ;; If the param-cycle is not in the past, then the rewards have to be zero.
+            (param-cycle-x-rewards (if (>= cycle static-current-cycle) u0 param-cycle-rewards-x))
+            (param-cycle-y-rewards (if (>= cycle static-current-cycle) u0 param-cycle-rewards-y))
+
             (param-cycle-user-data (default-to {lp-token-staked: u0,reward-claimed: false, lp-token-to-unstake: u0} (map-get? StakerDataPerCycleMap {x-token: static-x-token, y-token: static-y-token, lp-token: static-lp-token, user: tx-sender, cycle: cycle})))
         )
 
-        (if (or (> current-cycle-rewards-x u0) (> current-cycle-rewards-y u0))
+        (if (or (> param-cycle-x-rewards u0) (> param-cycle-y-rewards u0))
             ;; There are rewards to claim
             (begin 
                 ;; Update StakerDataPerCycleMap with reward-claimed = true
@@ -417,7 +418,7 @@
                     param-cycle-user-data
                     {reward-claimed: true}
                 ))
-                {x-token: static-x-token, y-token: static-y-token, lp-token: static-lp-token, total-rewards-x: (+ current-total-rewards-x current-cycle-rewards-x), total-rewards-y: (+ current-total-rewards-y current-cycle-rewards-y)}
+                {x-token: static-x-token, y-token: static-y-token, lp-token: static-lp-token, total-rewards-x: (+ current-total-rewards-x param-cycle-x-rewards), total-rewards-y: (+ current-total-rewards-y param-cycle-y-rewards), current-cycle: static-current-cycle}
             )
             ;; There are no rewards to claim
             fold-data

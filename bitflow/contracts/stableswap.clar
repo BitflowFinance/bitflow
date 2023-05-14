@@ -122,7 +122,7 @@
 ;; (define-read-only (get-cycle-rewards) body)
 
 ;; Get DX
-(define-read-only (get-dx (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint))
+(define-read-only (get-dx (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint))
     (let 
         (
             (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
@@ -145,7 +145,7 @@
             (y-amount-total-fees-scaled (/ (* y-amount total-swap-fee) u10000))
             (updated-y-amount-scaled (- y-amount-scaled y-amount-total-fees-scaled))
             (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
-            (new-x-scaled (get-x current-balance-y-scaled updated-y-balance-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
+            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
 
             ;; Scale down to precise amounts for x and dx, as well as y-amount-fee-lps, and y-amount-fee-protocol
             (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
