@@ -59,6 +59,9 @@
 ;; Liquidity Fees (3% initialized, all 3% to protocol)
 (define-data-var liquidity-fees uint u3)
 
+;; Helper var to remove admin
+(define-data-var helper-principal principal tx-sender)
+
 
 ;;;;;;;;;;
 ;; Maps ;;
@@ -912,6 +915,11 @@
     )
 )
 
+;; @desc - Helper function for removing a admin
+(define-private (is-not-removeable (admin principal))
+  (not (is-eq admin (var-get helper-principal)))
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Goverance Functions ;;;
@@ -1015,9 +1023,40 @@
     )
 )
 
-;; Remove Admin
+;; Remove admin
+(define-public (remove-admin (admin principal))
+  (let
+    (
+      (current-admin-list (var-get admins))
+      (caller-principal-position-in-list (index-of current-admin-list tx-sender))
+      (removeable-principal-position-in-list (index-of current-admin-list admin))
+    )
+
+    ;; asserts tx-sender is an existing whitelist address
+    (asserts! (is-some caller-principal-position-in-list) (err "err-not-auth"))
+
+    ;; asserts param principal (removeable whitelist) already exist
+    (asserts! (is-eq removeable-principal-position-in-list) (err "err-not-whitelisted"))
+
+    ;; temporary var set to help remove param principal
+    (var-set helper-principal admin)
+
+    ;; filter existing whitelist address
+    (ok 
+      (var-set admins (filter is-not-removeable current-admin-list))
+    )
+  )
+)
+
 ;; Change Swap Fee
+(define-public (change-swap-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+    (ok (var-set swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+)
+
 ;; Change Liquidity Fee
+(define-public (change-liquidity-fee (new-liquidity-fee uint)) 
+    (ok (var-set liquidity-fees new-liquidity-fee))
+)
 
 ;; Admins can change the amplification coefficient in PairsDataMap
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint
@@ -1056,3 +1095,4 @@
         (ok (var-set staking-and-rewards-contract staking-contract))
     )
 )
+
