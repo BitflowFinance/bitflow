@@ -720,16 +720,6 @@
                 )
             )
         )
-        ;; ;; if x-fee > 0, transfer x-fee to protocol-address
-        ;; (if (> x-fee u0)
-        ;;     (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
-        ;;     false
-        ;; )
-        ;; ;; if y-fee > 0, transfer y-fee to protocol-address
-        ;; (if (> y-fee u0)
-        ;;     (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
-        ;;     false
-        ;; )
 
         ;; Mint LP tokens to tx-sender
         (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d2 d0)) d0))) (err "err-minting-lp-tokens"))
@@ -1050,12 +1040,28 @@
 
 ;; Change Swap Fee
 (define-public (change-swap-fee (new-lps-fee uint) (new-protocol-fee uint)) 
-    (ok (var-set swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        (ok (var-set swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+    )
 )
 
 ;; Change Liquidity Fee
 (define-public (change-liquidity-fee (new-liquidity-fee uint)) 
-    (ok (var-set liquidity-fees new-liquidity-fee))
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        (ok (var-set liquidity-fees new-liquidity-fee))
+    )
 )
 
 ;; Admins can change the amplification coefficient in PairsDataMap
