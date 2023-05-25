@@ -443,11 +443,13 @@
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-to-unstake (get cycles-to-unstake current-staker-data))
+            (current-staked-by-unstaker (get total-currently-staked current-staker-data))
             (total-currently-staked-data (unwrap! (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-total-staked-per-pair")))
             (total-currently-staked-in-contract (get total-staked total-currently-staked-data))
             (unstake-data (fold fold-from-all-cycles-to-unstakeable-cycles current-cycles-to-unstake {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), total-lps-to-unstake: u0, current-cycles-to-unstake: current-cycles-to-unstake}))
             (lp-tokens-to-unstake (get total-lps-to-unstake unstake-data))
             (updated-total-currently-staked (- total-currently-staked-in-contract lp-tokens-to-unstake))
+            (updated-total-currently-staked-by-unstaker (- current-staked-by-unstaker lp-tokens-to-unstake))
             (updated-current-cycles-to-unstake (get current-cycles-to-unstake unstake-data))
         )
 
@@ -458,10 +460,10 @@
         
         (map-set StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender} (merge 
             current-staker-data
-            {total-currently-staked: updated-total-currently-staked, cycles-to-unstake: updated-current-cycles-to-unstake}
+            {total-currently-staked: updated-total-currently-staked-by-unstaker, cycles-to-unstake: updated-current-cycles-to-unstake}
         ))
         ;; Updating the total balance of LP tokens staked in this contract
-        (map-set TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: (- total-currently-staked-in-contract lp-tokens-to-unstake)})
+        (map-set TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: updated-total-currently-staked})
         (ok lp-tokens-to-unstake)
 
     )
