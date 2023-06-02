@@ -127,7 +127,6 @@
 ;; @returns (response bool)
 (define-public (mint (amount uint) (recipient principal))
 	(begin		
-		(asserts! (or (is-ok (check-is-approved)) (is-ok (check-is-owner))) ERR-NOT-AUTHORIZED)
 		(ft-mint? bridged-usdt amount recipient)
 	)
 )
@@ -140,8 +139,8 @@
 ;; @returns (response bool)
 (define-public (burn (amount uint) (sender principal))
 	(begin
-		(asserts! (or (is-ok (check-is-approved)) (is-ok (check-is-owner))) ERR-NOT-AUTHORIZED)
-		(ft-burn? bridged-usdt amount sender)
+		(asserts! (is-eq tx-sender sender) ERR-NOT-AUTHORIZED)
+		(ft-burn? bridged-usdt amount tx-sender)
 	)
 )
 
