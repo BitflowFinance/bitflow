@@ -7,7 +7,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait og-sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait susdt-sip-010-trait .alt-sip-010-trait-ft-standard.sip-010-trait)
 (use-trait lp-trait .lp-trait.lp-trait)
 
 ;;;;;;;;;;;;;;;
@@ -61,22 +62,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Get user data
-(define-read-only (get-user-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (user principal)) 
+(define-read-only (get-user-data (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <lp-trait>) (user principal)) 
     (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: user})
 )
 
 ;; Get user data at cycle
-(define-read-only (get-user-data-at-cycle (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (user principal) (cycle uint)) 
+(define-read-only (get-user-data-at-cycle (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <lp-trait>) (user principal) (cycle uint)) 
     (map-get? StakerDataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: user, cycle: cycle})
 )
 
 ;; Get user data at cycle
-(define-read-only (get-data-at-cycle (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (cycle uint)) 
+(define-read-only (get-data-at-cycle (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <lp-trait>) (cycle uint)) 
     (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: cycle})
 )
 
 ;; Get total LP tokens staked for a given pair
-(define-read-only (get-total-staked (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>)) 
+(define-read-only (get-total-staked (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <lp-trait>)) 
     (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
 )
 
@@ -121,7 +122,7 @@
 ;; minimal amount to stake?
 ;; require amount by divisible by cycle length? or fine dumping remainder into last cycle?
 ;; likely a less expensive way to deal with vars passed down to loops*
-(define-public (stake-lp-tokens (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycles uint) (amount uint))
+(define-public (stake-lp-tokens (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <og-sip-010-trait>) (cycles uint) (amount uint))
     (let 
         (
             (current-staker-data (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}))
@@ -285,7 +286,7 @@
 ;; Claim staking rewards per cycle
 ;; @desc: This function allows users to claim staking rewards for a given cycle
 ;; @param: x-token - The X token contract, y-token - The Y token contract, lp-token - The LP token contract, cycle - The cycle to claim rewards for
-(define-public (claim-cycle-staking-rewards (x-token principal) (y-token principal) (lp-token principal) (x-token-trait <sip-010-trait>) (y-token-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (cycle uint))
+(define-public (claim-cycle-staking-rewards (x-token principal) (y-token principal) (lp-token principal) (x-token-trait <og-sip-010-trait>) (y-token-trait <susdt-sip-010-trait>) (lp-token-trait <og-sip-010-trait>) (cycle uint))
     (let 
         (
             (current-cycle (contract-call? .stableswap get-current-cycle))
@@ -343,7 +344,7 @@
 ;; Claim all staking rewards
 ;; @desc: This function allows users to claim all staking rewards
 ;; @param: x-token - The X token contract, y-token - The Y token contract, lp-token - The LP token contract
-(define-public (claim-all-staking-rewards (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>))
+(define-public (claim-all-staking-rewards (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <og-sip-010-trait>))
     (let 
         (
             (current-cycle (contract-call? .stableswap get-current-cycle))
@@ -435,7 +436,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-public (unstake-all-lp-tokens (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>))
+(define-public (unstake-all-lp-tokens (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <og-sip-010-trait>))
     (let 
         (
             (liquidity-provider tx-sender)

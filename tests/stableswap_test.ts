@@ -2,6 +2,20 @@
 import { Clarinet, Tx, Chain, Account, types, EmptyBlock } from 'https://deno.land/x/clarinet@v1.6.0/index.ts';
 import { assertEquals } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
 
+// Test get current cycle
+Clarinet.test({
+    name: "Ensure we can get the deployment height",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        const call = chain.callReadOnlyFn("stableswap", "get-deployment-height", [], deployer.address)
+
+        call.result.expectUint(0)
+        console.log(JSON.stringify(call.result));
+    },
+});
+
 // Test get pair data with no pair set
 Clarinet.test({
     name: "Ensure we can read the pair data with no pair set",
@@ -56,19 +70,7 @@ Clarinet.test({
     },
 });
 
-// Test get current cycle
-Clarinet.test({
-    name: "Ensure we can get the deployment height",
-    async fn(chain: Chain, accounts: Map<string, Account>) {
-        const deployer = accounts.get("deployer")!;
-        const wallet_1 = accounts.get("wallet_1")!;
 
-        const call = chain.callReadOnlyFn("stableswap", "get-deployment-height", [], deployer.address)
-
-        call.result.expectUint(0)
-        console.log(JSON.stringify(call.result));
-    },
-});
 
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
