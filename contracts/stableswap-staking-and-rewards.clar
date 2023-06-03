@@ -1,4 +1,4 @@
-;; Bitflow Staking & Rewards
+;; Bitflow Staking & Rewards for USDA sUSDT pair
 ;; This contract handles the core logic for staking & rewards, it's where fees are collected and distributed
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -7,8 +7,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-trait og-sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
-(use-trait susdt-sip-010-trait .alt-sip-010-trait-ft-standard.sip-010-trait)
+(use-trait og-sip-010-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
+(use-trait susdt-sip-010-trait 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.trait-sip-010.sip-010-trait)
 (use-trait lp-trait .lp-trait.lp-trait)
 
 ;;;;;;;;;;;;;;;
@@ -85,12 +85,11 @@
 (define-read-only (get-staking-rewards-at-cycle (x-token principal) (y-token principal) (lp-token principal) (cycle uint))
     (let 
         (
-            ;; (current-cycle (contract-call? .stableswap get-current-cycle))
             (param-cycle-user-data (unwrap! (map-get? StakerDataPerCycleMap {x-token: x-token, y-token: y-token, lp-token: lp-token, user: tx-sender, cycle: cycle}) (err u4)))
             (param-cycle-reward-claimed (get reward-claimed param-cycle-user-data))
             (param-cycle-user-lp-staked (get lp-token-staked param-cycle-user-data))
             (param-cycle-total-lp-staked (unwrap! (map-get? DataPerCycleMap {x-token: x-token, y-token: y-token, lp-token: lp-token, cycle: cycle}) (err u5)))
-            (param-cycle-fees (unwrap! (contract-call? .stableswap get-cycle-data x-token y-token lp-token cycle) (err u0)))
+            (param-cycle-fees (unwrap! (contract-call? .stableswap-usda-susdt get-cycle-data x-token y-token lp-token cycle) (err u0)))
             (param-cycle-balance-x-fee (get cycle-fee-balance-x param-cycle-fees))
             (param-cycle-balance-y-fee (get cycle-fee-balance-y param-cycle-fees))
             (param-cycle-x-rewards (/ (* param-cycle-balance-x-fee param-cycle-user-lp-staked) param-cycle-total-lp-staked))
@@ -130,7 +129,7 @@
             (current-cycles-to-unstake (default-to (list ) (get cycles-to-unstake current-staker-data)))
             (updated-helper-uint-to-filter (var-set helper-uint cycles))
             (filtered-null-list (filter filter-null-value reward-cycle-index))
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            (current-cycle (contract-call? .stableswap-usda-susdt get-current-cycle))
             (updated-helper-uint-to-map (var-set helper-uint current-cycle))
             (next-cycles (map map-filtered-null-list filtered-null-list))
             (updated-helper-uint-list-current-cycles (var-set helper-uint-list current-cycles-staked))
@@ -138,7 +137,7 @@
             (unstake-cycle (+ u1 (+ current-cycle cycles)))
             (is-unstakeable-block-in-unstakeable-cycles (is-some (index-of current-cycles-to-unstake unstake-cycle)))
             (current-all-staker-data (map-get? DataPerCycleMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle: current-cycle}))
-            (pair-data (unwrap! (contract-call? .stableswap get-pair-data x-token y-token lp-token) (err "err-no-pair-data")))
+            (pair-data (unwrap! (contract-call? .stableswap-usda-susdt get-pair-data x-token y-token lp-token) (err "err-no-pair-data")))
             (total-currently-staked-data (default-to {total-staked: u0} (map-get? TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})))
             (total-currently-staked-in-contract (get total-staked total-currently-staked-data))
             (approved-pair (get approval pair-data))
@@ -289,12 +288,12 @@
 (define-public (claim-cycle-staking-rewards (x-token principal) (y-token principal) (lp-token principal) (x-token-trait <og-sip-010-trait>) (y-token-trait <susdt-sip-010-trait>) (lp-token-trait <og-sip-010-trait>) (cycle uint))
     (let 
         (
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            (current-cycle (contract-call? .stableswap-usda-susdt get-current-cycle))
             (param-cycle-user-data (unwrap! (map-get? StakerDataPerCycleMap {x-token: x-token, y-token: y-token, lp-token: lp-token, user: tx-sender, cycle: cycle}) (err "err-no-cycle-data")))
             (param-cycle-reward-claimed (get reward-claimed param-cycle-user-data))
             (param-cycle-user-lp-staked (get lp-token-staked param-cycle-user-data))
             (param-cycle-total-lp-staked (unwrap! (map-get? DataPerCycleMap {x-token: x-token, y-token: y-token, lp-token: lp-token, cycle: cycle}) (err "err-no-cycle-data")))
-            (param-cycle-fees (unwrap! (contract-call? .stableswap get-cycle-data x-token y-token lp-token cycle) (err "err-no-cycle-data")))
+            (param-cycle-fees (unwrap! (contract-call? .stableswap-usda-susdt get-cycle-data x-token y-token lp-token cycle) (err "err-no-cycle-data")))
             (param-cycle-balance-x-fee (get cycle-fee-balance-x param-cycle-fees))
             (param-cycle-balance-y-fee (get cycle-fee-balance-y param-cycle-fees))
             (param-cycle-x-rewards (/ (* param-cycle-balance-x-fee param-cycle-user-lp-staked) param-cycle-total-lp-staked))
@@ -347,7 +346,7 @@
 (define-public (claim-all-staking-rewards (x-token <og-sip-010-trait>) (y-token <susdt-sip-010-trait>) (lp-token <og-sip-010-trait>))
     (let 
         (
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            (current-cycle (contract-call? .stableswap-usda-susdt get-current-cycle))
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-staked (get cycles-staked current-staker-data))
@@ -440,7 +439,7 @@
     (let 
         (
             (liquidity-provider tx-sender)
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            (current-cycle (contract-call? .stableswap-usda-susdt get-current-cycle))
             (current-cycle-helper (var-set helper-uint current-cycle))
             (current-staker-data (unwrap! (map-get? StakerDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), user: tx-sender}) (err "err-no-staker-data")))
             (current-cycles-to-unstake (get cycles-to-unstake current-staker-data))
@@ -473,7 +472,7 @@
 (define-private (fold-from-all-cycles-to-unstakeable-cycles (cycle uint) (fold-data {x-token: principal, y-token: principal, lp-token: principal, total-lps-to-unstake: uint, current-cycles-to-unstake: (list 12000 uint)})) 
     (let 
         (
-            (current-cycle (contract-call? .stableswap get-current-cycle))
+            (current-cycle (contract-call? .stableswap-usda-susdt get-current-cycle))
             (current-total-lp-tokens-to-unstake (get total-lps-to-unstake fold-data))
             (static-x-token (get x-token fold-data))
             (static-y-token (get y-token fold-data))

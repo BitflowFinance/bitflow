@@ -10,8 +10,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-trait og-sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
-(use-trait susdt-sip-010-trait .alt-sip-010-trait-ft-standard.sip-010-trait)
+(use-trait og-sip-010-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
+(use-trait susdt-sip-010-trait 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.trait-sip-010.sip-010-trait)
 (use-trait lp-trait .lp-trait.lp-trait)
 
 ;;;;;;;;;;;;;;;
@@ -34,13 +34,13 @@
 (define-constant number-of-tokens u2)
 
 ;; Test Protocol Address
-(define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
+(define-constant protocol-address 'SP3GDP77BDSZ4VN2QQP057C9T6DRDDB6WGES6K9CP)
 
 ;; Convergence Threshold Constant
 (define-constant convergence-threshold u2)
 
 ;; Contract for Stableswap Staking and Rewards
-(define-data-var staking-and-rewards-contract principal .stableswap-staking-and-rewards)
+(define-data-var staking-and-rewards-contract principal (as-contract tx-sender))
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -989,4 +989,3 @@
         (ok (var-set staking-and-rewards-contract staking-contract))
     )
 )
-
