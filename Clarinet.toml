@@ -5,6 +5,11 @@ authors = []
 telemetry = false
 cache_dir = './.cache'
 requirements = []
+[contracts.earn-stackingDAO]
+path = 'contracts/earn-stackingDAO.clar'
+clarity_version = 2
+epoch = 2.1
+
 [contracts.lp-trait]
 path = 'contracts/lp-trait.clar'
 clarity_version = 2
@@ -22,6 +27,11 @@ epoch = 2.1
 
 [contracts.stableswap-fee-escrow]
 path = 'contracts/stableswap-fee-escrow.clar'
+clarity_version = 2
+epoch = 2.1
+
+[contracts.stableswap-stackingDAO]
+path = 'contracts/stableswap-stackingDAO.clar'
 clarity_version = 2
 epoch = 2.1
 
