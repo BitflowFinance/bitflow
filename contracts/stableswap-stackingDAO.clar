@@ -149,18 +149,16 @@
             (current-balance-y-scaled (get scaled-y scaled-up-balances))
             (scaled-up-swap-amount (get-scaled-up-token-amounts u0 y-amount x-decimals y-decimals))
             (y-amount-scaled (get scaled-y scaled-up-swap-amount))
-            (y-amount-fees-lps-scaled (/ (* y-amount-scaled swap-fee-lps) u10000))
-            (y-amount-fees-protocol-scaled (/ (* y-amount-scaled swap-fee-protocol) u10000))
-            (y-amount-total-fees-scaled (/ (* y-amount total-swap-fee) u10000))
-            (updated-y-amount-scaled (- y-amount-scaled y-amount-total-fees-scaled))
-            (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
-            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
-
-            ;; Scale down to precise amounts for x and dx, as well as y-amount-fee-lps, and y-amount-fee-protocol
+            (updated-y-balance-scaled (+ current-balance-y-scaled y-amount-scaled))
+            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
             (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
-            (dx (- current-balance-x new-x))
-            (y-amount-fee-lps (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
-            (y-amount-fee-protocol (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled x-decimals y-decimals)))
+            (new-y (+ current-balance-y y-amount))
+
+            ;; Apply fees on the delta in x
+            (dx-without-fees (- current-balance-x new-x)) 
+            (x-amount-fee-lps (/ (* dx-without-fees swap-fee-lps) u10000))
+            (x-amount-fee-protocol (/ (* dx-without-fees swap-fee-protocol) u10000))
+            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-protocol)))
         )
         (ok dx)
     )
@@ -432,19 +430,16 @@
             (current-balance-y-scaled (get scaled-y scaled-up-balances))
             (scaled-up-swap-amount (get-scaled-up-token-amounts u0 y-amount x-decimals y-decimals))
             (y-amount-scaled (get scaled-y scaled-up-swap-amount))
-            (y-amount-fees-lps-scaled (/ (* y-amount-scaled swap-fee-lps) u10000))
-            (y-amount-fees-protocol-scaled (/ (* y-amount-scaled swap-fee-protocol) u10000))
-            (updated-y-amount-scaled (- y-amount-scaled (+ y-amount-fees-lps-scaled y-amount-fees-protocol-scaled)))
-            (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
-            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
-            
-            ;; Scale down to precise amounts for y and dy, as well as y-amount-fee-lps, and y-amount-fee-protocol
+            (updated-y-balance-scaled (+ current-balance-y-scaled y-amount-scaled))
+            (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
             (new-x (get scaled-x (get-scaled-down-token-amounts new-x-scaled u0 x-decimals y-decimals)))
-            (dx (- current-balance-x new-x))
-            (y-amount-fee-lps (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-lps-scaled x-decimals y-decimals)))
-            (y-amount-fee-protocol (get scaled-y (get-scaled-down-token-amounts u0 y-amount-fees-protocol-scaled x-decimals y-decimals)))
-            (updated-y-amount (- y-amount (+ y-amount-fee-lps y-amount-fee-protocol)))
-            (updated-y-balance (+ current-balance-y updated-y-amount))
+            (new-y (+ current-balance-y y-amount))
+
+            ;; Apply fees on the delta in x
+            (dx-without-fees (- current-balance-x new-x)) 
+            (x-amount-fee-lps (/ (* dx-without-fees swap-fee-lps) u10000))
+            (x-amount-fee-protocol (/ (* dx-without-fees swap-fee-protocol) u10000))
+            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-protocol)))
         )
 
         ;; Assert that pair is approved
@@ -456,21 +451,21 @@
         ;; Assert that dx is greater than min-x-amount
         (asserts! (> dx min-x-amount) (err "err-min-x-amount"))
 
-        ;; Transfer updated-y-balance tokens from tx-sender to this contract
-        (if (> updated-y-amount u0) 
-            (unwrap! (contract-call? y-token transfer updated-y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
+        ;; Transfer y-amount tokens from tx-sender to this contract
+        (if (> y-amount u0) 
+            (unwrap! (contract-call? y-token transfer y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
             false
         )
 
-        ;; Transfer y-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
-        (if (> y-amount-fee-lps u0) 
-            (unwrap! (contract-call? y-token transfer y-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-y-swap-fee"))
+        ;; Transfer x-amount-fee-lps tokens from this-contract to staking-and-rewards-contract
+        (if (> x-amount-fee-lps u0) 
+            (unwrap! (as-contract (contract-call? x-token transfer x-amount-fee-lps tx-sender (var-get staking-and-rewards-contract) none)) (err "err-transferring-token-x-swap-fee"))
             false
         )
 
-        ;; Transfer y-amount-fee-protocol tokens from tx-sender to protocol-address
-        (if (> y-amount-fee-protocol u0) 
-            (unwrap! (contract-call? y-token transfer y-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-y-protocol-fee"))
+        ;; Transfer x-amount-fee-protocol tokens from this-contract to protocol-address
+        (if (> x-amount-fee-protocol u0) 
+            (unwrap! (as-contract (contract-call? x-token transfer x-amount-fee-protocol tx-sender protocol-address none)) (err "err-transferring-token-x-protocol-fee"))
             false
         )
 
@@ -486,7 +481,7 @@
             pair-data 
             {
                 balance-x: new-x,
-                balance-y: updated-y-balance,
+                balance-y: new-y,
                 d: (get-D new-x-scaled updated-y-balance-scaled (* (get amplification-coefficient pair-data) number-of-tokens))
             }
         ))
@@ -498,13 +493,13 @@
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
                     cycle-data 
                     {
-                        cycle-fee-balance-y: (+ (get cycle-fee-balance-y cycle-data) y-amount-fee-lps)
+                        cycle-fee-balance-x: (+ (get cycle-fee-balance-x cycle-data) x-amount-fee-lps)
                     }
                 ))
                 ;; Create new CycleDataMap
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
-                    cycle-fee-balance-x: u0,
-                    cycle-fee-balance-y: y-amount-fee-lps,
+                    cycle-fee-balance-x: x-amount-fee-lps,
+                    cycle-fee-balance-y: u0,
                 })
             
         ))
