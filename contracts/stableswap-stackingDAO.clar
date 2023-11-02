@@ -54,7 +54,13 @@
 (define-data-var admins (list 5 principal) (list tx-sender))
 
 ;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
-(define-data-var swap-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
+;; (define-data-var swap-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
+
+;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
+(define-data-var buy-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
+
+;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
+(define-data-var sell-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
 
 ;; Liquidity Fees (3 bps initialized, all to protocol)
 (define-data-var liquidity-fees uint u3)
@@ -133,8 +139,8 @@
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
-            (swap-fee-lps (get lps (var-get swap-fees)))
-            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (swap-fee-lps (get lps (var-get sell-fees)))
+            (swap-fee-protocol (get protocol (var-get sell-fees)))
             (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
 
             ;; Scale up balances to perform AMM calculations with get-x
@@ -218,8 +224,8 @@
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
-            (swap-fee-lps (get lps (var-get swap-fees)))
-            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (swap-fee-lps (get lps (var-get buy-fees)))
+            (swap-fee-protocol (get protocol (var-get buy-fees)))
             (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
 
 
@@ -314,8 +320,8 @@
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
-            (swap-fee-lps (get lps (var-get swap-fees)))
-            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (swap-fee-lps (get lps (var-get buy-fees)))
+            (swap-fee-protocol (get protocol (var-get buy-fees)))
             (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
 
             ;; Scale up balances and the swap amount to perform AMM calculations with get-y
@@ -416,8 +422,8 @@
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
-            (swap-fee-lps (get lps (var-get swap-fees)))
-            (swap-fee-protocol (get protocol (var-get swap-fees)))
+            (swap-fee-lps (get lps (var-get sell-fees)))
+            (swap-fee-protocol (get protocol (var-get sell-fees)))
             (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
 
             ;; Scale up balances and the swap amount to perform AMM calculations with get-x
@@ -926,7 +932,7 @@
 )
 
 ;; Change Swap Fee
-(define-public (change-swap-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+(define-public (change-buy-fee (new-lps-fee uint) (new-protocol-fee uint)) 
     (let 
         (
             (current-admins (var-get admins))
@@ -934,7 +940,20 @@
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
-        (ok (var-set swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+        (ok (var-set buy-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+    )
+)
+
+;; Change Swap Fee
+(define-public (change-sell-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        (ok (var-set sell-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
     )
 )
 
