@@ -35,11 +35,8 @@
 ;; Test Protocol Address
 (define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 
-;; Convergence Threshold Constant
-(define-constant convergence-threshold u2)
-
-;; Contract for Stableswap Staking and Rewards
-(define-data-var staking-and-rewards-contract principal .earn-stackingDAO)
+;; ;; Convergence Threshold Constant
+;; (define-constant convergence-threshold u2)
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -50,11 +47,11 @@
 ;; Variables ;;
 ;;;;;;;;;;;;;;;
 
+;; Contract for Stableswap Staking and Rewards
+(define-data-var staking-and-rewards-contract principal .earn-stackingDAO)
+
 ;; Admin Governance List
 (define-data-var admins (list 5 principal) (list tx-sender))
-
-;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
-;; (define-data-var swap-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
 
 ;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
 (define-data-var buy-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
@@ -70,6 +67,9 @@
 
 ;; Helper var to remove admin
 (define-data-var helper-principal principal tx-sender)
+
+;; Convergence Threshold
+(define-data-var convergence-threshold uint u2)
 
 
 ;;;;;;;;;;
@@ -194,15 +194,16 @@
             (x-numerator (+ (* current-x current-x) current-c))
             (x-denominator (- (+ (* u2 current-x) current-b) current-D))
             (new-x (/ x-numerator x-denominator))
+            (threshold (var-get convergence-threshold))
         )
 
         (if (is-eq current-converged u0)
             (if (> new-x  current-x)
-                (if (<= (- new-x current-x) convergence-threshold)
+                (if (<= (- new-x current-x) threshold)
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
-                (if (<= (- current-x new-x) convergence-threshold)
+                (if (<= (- current-x new-x) threshold)
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: new-x}
                     {x: new-x, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
@@ -280,15 +281,17 @@
             (y-numerator (+ (* current-y current-y) current-c))
             (y-denominator (- (+ (* u2 current-y) current-b) current-D))
             (new-y (/ y-numerator y-denominator))
+            (threshold (var-get convergence-threshold))
+
         )
 
         (if (is-eq current-converged u0)
             (if (> new-y  current-y)
-                (if (<= (- new-y current-y) convergence-threshold)
+                (if (<= (- new-y current-y) threshold)
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: new-y}
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
-                (if (<= (- current-y new-y) convergence-threshold)
+                (if (<= (- current-y new-y) threshold)
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: new-y}
                     {y: new-y, c: current-c, b: current-b, D: current-D, converged: u0}
                 )
@@ -733,17 +736,19 @@
             (new-denominator (+ (* (- current-ann u1) current-D) (* (+ number-of-tokens u1 ) new-D-partial)))
 
             (new-D (/ new-numerator new-denominator))
+            (threshold (var-get convergence-threshold))
+
             
         )
         
         ;; Check if converged value / new D was already found
         (if (is-eq current-converged u0)
             (if (> new-D  current-D)
-                (if (<= (- new-D current-D) convergence-threshold)
+                (if (<= (- new-D current-D) threshold)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
-                (if (<= (- current-D new-D) convergence-threshold)
+                (if (<= (- current-D new-D) threshold)
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: new-D}
                     {D: new-D, x-bal: current-x-bal, y-bal: current-y-bal, ann: current-ann, converged: u0}
                 )
@@ -1007,6 +1012,19 @@
                 amplification-coefficient: amplification-coefficient
             }
         )))
+    )
+)
+
+;; Change Convergence Threshold 
+(define-public (change-convergence-threshold (new-convergence-threshold uint)) 
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        (ok (var-set convergence-threshold new-convergence-threshold))
     )
 )
 
