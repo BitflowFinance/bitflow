@@ -39,7 +39,7 @@
 (define-constant convergence-threshold u2)
 
 ;; Contract for Stableswap Staking and Rewards
-(define-data-var staking-and-rewards-contract principal .stableswap-staking-and-rewards)
+(define-data-var staking-and-rewards-contract principal .earn-stackingDAO)
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -76,7 +76,7 @@
 ;; Maps ;;
 ;;;;;;;;;;
 
-(define-map PairsDataMap {x-token: principal, y-token: principal, lp-token: principal} {
+(define-map PairsDataMap {y-token: principal, lp-token: principal} {
     approval: bool,
     total-shares: uint,
     x-decimals: uint,
@@ -87,9 +87,8 @@
     amplification-coefficient: uint,
 })
 
-(define-map CycleDataMap {x-token: principal, y-token: principal, lp-token: principal, cycle-num: uint} {
-    cycle-fee-balance-x: uint,
-    cycle-fee-balance-y: uint,
+(define-map CycleDataMap {y-token: principal, lp-token: principal, cycle-num: uint} {
+    cycle-fee-balance-x: uint
 })
 
 
@@ -101,13 +100,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Get pair data
-(define-read-only (get-pair-data (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <sip-010-trait>)) 
-    (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
+(define-read-only (get-pair-data (y-token <sip-010-trait>) (lp-token <sip-010-trait>)) 
+    (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)})
 )
 
 ;; Get cycle data
-(define-read-only (get-cycle-data (x-token principal) (y-token principal) (lp-token principal) (cycle-num uint)) 
-    (map-get? CycleDataMap {x-token: x-token, y-token: y-token, lp-token: lp-token, cycle-num: cycle-num})
+(define-read-only (get-cycle-data (y-token principal) (lp-token principal) (cycle-num uint)) 
+    (map-get? CycleDataMap {y-token: y-token, lp-token: lp-token, cycle-num: cycle-num})
 )
 
 ;; Get current cycle
@@ -134,10 +133,10 @@
 ;; (define-read-only (get-cycle-rewards) body)
 
 ;; Get DX
-(define-read-only (get-dx (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint))
+(define-read-only (get-dx (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint))
     (let 
         (
-            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
@@ -216,11 +215,11 @@
 )
 
 ;; Get DY
-(define-read-only (get-dy (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint))
+(define-read-only (get-dy (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint))
     (let 
         (
             
-            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
             (x-decimals (get x-decimals pair-data))
@@ -311,11 +310,11 @@
 ;; Swap X -> Y
 ;; @desc: Swaps X token for Y token
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount: uint, min-y-amount: uint
-(define-public (swap-x-for-y (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
+(define-public (swap-x-for-y (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
     (let 
         (
             (swapper tx-sender)
-            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
@@ -362,21 +361,21 @@
         ;; Assert that dy is greater than min-y-amount
         (asserts! (> dy min-y-amount) (err "err-min-y-amount"))
 
-        ;; Transfer updated-x-balance tokens from tx-sender to this contract
+        ;; Transfer updated-x-amount tokens from tx-sender to this contract
         (if (> updated-x-amount u0) 
-            (unwrap! (contract-call? x-token transfer updated-x-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-x"))
+            (unwrap! (stx-transfer? updated-x-amount swapper (as-contract tx-sender)) (err "err-transferring-token-x"))
             false
         )
 
         ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
         (if (> x-amount-fee-lps u0) 
-            (unwrap! (contract-call? x-token transfer x-amount-fee-lps swapper (var-get staking-and-rewards-contract) none) (err "err-transferring-token-x-fee"))
+            (unwrap! (stx-transfer? x-amount-fee-lps swapper (var-get staking-and-rewards-contract)) (err "err-transferring-token-x-fee"))
             false
         )
 
         ;; Transfer x-amount-fee-protocol tokens from tx-sender to protocol-address
-        (if (> x-amount-fee-protocol u0) 
-            (unwrap! (contract-call? x-token transfer x-amount-fee-protocol swapper protocol-address none) (err "err-transferring-token-x-fee-protocol"))
+        (if (> x-amount-fee-protocol u0)
+            (unwrap! (stx-transfer? x-amount-fee-protocol swapper protocol-address) (err "err-transferring-token-x-fee-protocol"))
             false
         )
 
@@ -388,7 +387,7 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             pair-data 
             {
                 balance-x: updated-x-balance,
@@ -398,19 +397,18 @@
         ))
 
         ;; Match if map-get? returns some for CycleDataMap
-        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+        (ok (match (map-get? CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
             cycle-data
                 ;; Update CycleDataMap
-                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
+                (map-set CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
                     cycle-data 
                     {
                         cycle-fee-balance-x: (+ (get cycle-fee-balance-x cycle-data) x-amount-fee-lps)
                     }
                 ))
                 ;; Create new CycleDataMap
-                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
+                (map-set CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
                     cycle-fee-balance-x: x-amount-fee-lps,
-                    cycle-fee-balance-y: u0,
                 })
             
         ))
@@ -420,11 +418,11 @@
 ;; Swap Y -> X
 ;; @desc: Swaps Y token for X token
 ;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
-(define-public (swap-y-for-x (y-token <sip-010-trait>) (x-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
+(define-public (swap-y-for-x (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
             (swapper tx-sender)
-            (pair-data (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
             (current-balance-y (get balance-y pair-data))
@@ -476,25 +474,25 @@
 
         ;; Transfer x-amount-fee-lps tokens from this-contract to staking-and-rewards-contract
         (if (> x-amount-fee-lps u0) 
-            (unwrap! (as-contract (contract-call? x-token transfer x-amount-fee-lps tx-sender (var-get staking-and-rewards-contract) none)) (err "err-transferring-token-x-swap-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-lps tx-sender (var-get staking-and-rewards-contract))) (err "err-transferring-token-x-swap-fee"))
             false
         )
 
         ;; Transfer x-amount-fee-protocol tokens from this-contract to protocol-address
         (if (> x-amount-fee-protocol u0) 
-            (unwrap! (as-contract (contract-call? x-token transfer x-amount-fee-protocol tx-sender protocol-address none)) (err "err-transferring-token-x-protocol-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-protocol tx-sender protocol-address)) (err "err-transferring-token-x-protocol-fee"))
             false
         )
 
         ;; Transfer dx tokens from this contract to tx-sender
         (if (> dx u0) 
-            (unwrap! (as-contract (contract-call? x-token transfer dx tx-sender swapper none)) (err "err-transferring-token-x"))
+            (unwrap! (as-contract (stx-transfer? dx tx-sender swapper)) (err "err-transferring-token-x"))
             false
         )
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             pair-data 
             {
                 balance-x: new-x,
@@ -504,19 +502,18 @@
         ))
 
         ;; Match if map-get? returns some for CycleDataMap
-        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+        (ok (match (map-get? CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
             cycle-data
                 ;; Update CycleDataMap
-                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
+                (map-set CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
                     cycle-data 
                     {
                         cycle-fee-balance-x: (+ (get cycle-fee-balance-x cycle-data) x-amount-fee-lps)
                     }
                 ))
                 ;; Create new CycleDataMap
-                (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
+                (map-set CycleDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
                     cycle-fee-balance-x: x-amount-fee-lps,
-                    cycle-fee-balance-y: u0,
                 })
             
         ))
@@ -533,12 +530,12 @@
 ;; Add Liquidity
 ;; @desc: Adds liquidity to a pair, mints the appropriate amount of LP tokens
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
-(define-public (add-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint) (min-lp-amount uint) )
+(define-public (add-liquidity (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint) (min-lp-amount uint) )
     (let 
         (
             ;; Grabbing all data from PairsDataMap
             (liquidity-provider tx-sender)
-            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
             (x-decimals (get x-decimals current-pair))
             (y-decimals (get y-decimals current-pair))
@@ -604,8 +601,8 @@
         (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) min-lp-amount) (err "err-derived-amount-less-than-lp"))
 
         ;; ;; Transfer x-amount-added tokens from tx-sender to this contract
-        (if (> x-amount-added-updated u0) 
-            (unwrap! (contract-call? x-token transfer x-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-x-escrow"))
+        (if (> x-amount-added-updated u0)
+            (unwrap! (stx-transfer? x-amount-added-updated liquidity-provider (as-contract tx-sender)) (err "err-transferring-token-x-escrow"))
             false
         )
 
@@ -617,7 +614,7 @@
         
         ;; Transfer x-fees tokens from tx-sender to protocol-address
         (if (> x-fee u0)
-            (unwrap! (contract-call? x-token transfer x-fee liquidity-provider protocol-address none) (err "err-transferring-token-x-protocol"))
+            (unwrap! (stx-transfer? x-fee liquidity-provider protocol-address) (err "err-transferring-token-x-protocol"))
             false
         )
          ;; Transfer y-fees tokens from tx-sender to protocol-address
@@ -631,7 +628,7 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
+        (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
             (merge 
                 current-pair 
                 {
@@ -648,11 +645,11 @@
 ;; Withdraw Liquidity
 ;; @desc: Withdraws liquidity from both pairs & burns the appropriate amount of LP tokens
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, lp-amount: uint, min-x-amount: uint, min-y-amount: uint
-(define-public (withdraw-liquidity (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (lp-amount uint) (min-x-amount uint) (min-y-amount uint))
+(define-public (withdraw-liquidity (y-token <sip-010-trait>) (lp-token <lp-trait>) (lp-amount uint) (min-x-amount uint) (min-y-amount uint))
     (let 
         (
             ;; Grabbing all data from PairsDataMap
-            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
             (x-decimals (get x-decimals current-pair))
             (y-decimals (get y-decimals current-pair))
@@ -682,14 +679,13 @@
         (unwrap! (contract-call? lp-token burn liquidity-remover lp-amount) (err "err-burning-lp-tokens"))
 
         ;; Transfer withdrawal-balance-x tokens from this contract to liquidity-taker
-        (unwrap! (as-contract (contract-call? x-token transfer withdrawal-balance-x tx-sender liquidity-remover none)) (err "err-transferring-token-x"))
-
+        (unwrap! (as-contract (stx-transfer? withdrawal-balance-x  tx-sender liquidity-remover)) (err "err-transferring-token-x"))
         ;; Transfer withdrawal-balance-y tokens from this contract to liquidity-taker
         (unwrap! (as-contract (contract-call? y-token transfer withdrawal-balance-y tx-sender liquidity-remover none)) (err "err-transferring-token-y"))
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             current-pair 
             {
                 balance-x: new-balance-x,
@@ -825,11 +821,11 @@
 ;; @desc: Creates a new pair for trading
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint, pair-name: string, x-balance: uint, y-balance: uint
 ;; initial-balance param is for TOTAL balance of x + y tokens (aka 2x or 2y or (x + y))
-(define-public (create-pair (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
+(define-public (create-pair (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
     (let 
         (
             (lp-owner tx-sender)
-            (x-decimals (unwrap! (contract-call? x-token get-decimals) (err "err-getting-x-decimals")))
+            (x-decimals u6) ;; STX token has precision of 6 decimals
             (y-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
             (scaled-up-balances (get-scaled-up-token-amounts initial-x-bal initial-y-bal x-decimals y-decimals))
             (initial-x-bal-scaled (get scaled-x scaled-up-balances))
@@ -840,10 +836,7 @@
         (asserts! (is-some (index-of (var-get admins) tx-sender )) (err "err-not-admin"))
 
         ;; Assert using and that the pair does not already exist using is-none & map-get?
-        (asserts! (and 
-            (is-none (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}))
-            (is-none (map-get? PairsDataMap {x-token: (contract-of y-token), y-token: (contract-of x-token), lp-token: (contract-of lp-token)}))
-        )  (err "err-pair-xy-or-yx-exists"))
+        (asserts! (is-none (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)})) (err "err-pair-xy-or-yx-exists"))
 
         ;; Assert that both initial balances are greater than 0
         (asserts! (or (> initial-x-bal u0) (> initial-y-bal u0)) (err "err-initial-bal-zero"))
@@ -855,13 +848,13 @@
         (unwrap! (as-contract (contract-call? lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
 
         ;; Transfer token x liquidity to this contract
-        (unwrap! (contract-call? x-token transfer initial-x-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-x"))
+        (unwrap! (stx-transfer? initial-x-bal tx-sender (as-contract tx-sender)) (err "err-transferring-token-x"))
 
         ;; Transfer token y liquidity to this contract
         (unwrap! (contract-call? y-token transfer initial-y-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
         ;; Update all appropriate maps
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
+        (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
             approval: true,
             total-shares: (+ initial-x-bal-scaled initial-y-bal-scaled),
             x-decimals: x-decimals,
@@ -878,17 +871,17 @@
 ;; Setting Pair Approval
 ;; @desc: Sets the approval of a pair
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, approval: bool
-(define-public (set-pair-approval (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (approval bool))
+(define-public (set-pair-approval (y-token <sip-010-trait>) (lp-token <lp-trait>) (approval bool))
     (let 
         (
-            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
         )
 
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of (var-get admins) tx-sender)) (err "err-not-admin"))
 
         ;; Update all appropriate maps
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             current-pair
             {
                 approval: approval
@@ -997,10 +990,10 @@
 
 ;; Admins can change the amplification coefficient in PairsDataMap
 ;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint
-(define-public (change-amplification-coefficient (x-token <sip-010-trait>) (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint))
+(define-public (change-amplification-coefficient (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint))
     (let 
         (
-            (current-pair (unwrap! (map-get? PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
+            (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-admins (var-get admins))
         )
 
@@ -1008,7 +1001,7 @@
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Update all appropriate maps
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             current-pair
             {
                 amplification-coefficient: amplification-coefficient
