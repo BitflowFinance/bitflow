@@ -32,11 +32,6 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
-;; Protocol Addresses
-(define-constant stacking-dao-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
-
-(define-constant bitflow-address 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG)
-
 ;;;;;;;;;;;;
 ;; Errors ;;
 ;;;;;;;;;;;;
@@ -48,6 +43,12 @@
 
 ;; Contract for Stableswap Staking and Rewards
 (define-data-var staking-and-rewards-contract principal .earn-stackingDAO)
+
+;; Contract for the Stacking DAO to receive fees
+(define-data-var stacking-dao-contract principal 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
+
+;; Contract for the Bitflow protocol to receive fees
+(define-data-var bitflow-contract principal 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG)
 
 ;; Admin Governance List
 (define-data-var admins (list 5 principal) (list tx-sender))
@@ -385,13 +386,13 @@
 
         ;; Transfer x-amount-fee-stacking-dao tokens from tx-sender to stacking-dao-address
         (if (> x-amount-fee-stacking-dao u0)
-            (unwrap! (stx-transfer? x-amount-fee-stacking-dao swapper stacking-dao-address) (err "err-transferring-token-x-fee-stacking-dao"))
+            (unwrap! (stx-transfer? x-amount-fee-stacking-dao swapper (var-get stacking-dao-contract)) (err "err-transferring-token-x-fee-stacking-dao"))
             false
         )
 
         ;; Transfer x-amount-fee-biflow tokens from tx-sender to bitflow-address
         (if (> x-amount-fee-bitflow u0)
-            (unwrap! (stx-transfer? x-amount-fee-bitflow swapper bitflow-address) (err "err-transferring-token-x-fee-bitflow"))
+            (unwrap! (stx-transfer? x-amount-fee-bitflow swapper (var-get bitflow-contract)) (err "err-transferring-token-x-fee-bitflow"))
             false
         )
 
@@ -501,13 +502,13 @@
 
         ;; Transfer x-amount-fee-stacking-dao tokens from this-contract to stacking-dao-address
         (if (> x-amount-fee-stacking-dao u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-stacking-dao tx-sender stacking-dao-address)) (err "err-transferring-token-x-stacking-dao-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-stacking-dao tx-sender (var-get stacking-dao-contract))) (err "err-transferring-token-x-stacking-dao-fee"))
             false
         )
 
         ;; Transfer x-amount-fee-bitflow tokens from this-contract to bitflow-address
         (if (> x-amount-fee-bitflow u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-bitflow tx-sender bitflow-address)) (err "err-transferring-token-x-bitflow-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-bitflow tx-sender (var-get bitflow-contract))) (err "err-transferring-token-x-bitflow-fee"))
             false
         )
 
@@ -641,12 +642,12 @@
         
         ;; Transfer x-fees tokens from tx-sender to bitflow-address
         (if (> x-fee u0)
-            (unwrap! (stx-transfer? x-fee liquidity-provider bitflow-address) (err "err-transferring-token-x-protocol"))
+            (unwrap! (stx-transfer? x-fee liquidity-provider (var-get bitflow-contract)) (err "err-transferring-token-x-protocol"))
             false
         )
          ;; Transfer y-fees tokens from tx-sender to bitflow-address
         (if (> y-fee u0)
-            (unwrap! (contract-call? y-token transfer y-fee liquidity-provider bitflow-address none) (err "err-transferring-token-y-protocol"))
+            (unwrap! (contract-call? y-token transfer y-fee liquidity-provider (var-get bitflow-contract) none) (err "err-transferring-token-y-protocol"))
             false
         )
 
@@ -1052,7 +1053,7 @@
     )
 )
 
-;; Admins can set the contract for handling staking and rewards
+;; Admins can set the contract for handling staking and liquidity provider rewards
 ;; @params: staking-contract: principal
 (define-public (set-staking-contract (staking-contract principal))
     (let 
@@ -1068,3 +1069,34 @@
     )
 )
 
+;; Admins can set the contract for the stacking dao to collect fees
+;; @params: stacking-dao-contract: principal
+(define-public (set-stacking-dao-contract (stacking-dao-address principal))
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Set contract for handling staking and rewards
+        (ok (var-set stacking-dao-contract stacking-dao-address))
+    )
+)
+
+;; Admins can set the contract for bitflow protocol to collect fees
+;; @params: bitflow-contract: principal
+(define-public (set-bitflow-contract (bitflow-address principal))
+    (let 
+        (
+            (current-admins (var-get admins))
+        )
+
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+
+        ;; Set contract for handling staking and rewards
+        (ok (var-set bitflow-contract bitflow-address))
+    )
+)
