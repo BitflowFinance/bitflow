@@ -32,11 +32,10 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
-;; Test Protocol Address
-(define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
+;; Protocol Addresses
+(define-constant stacking-dao-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 
-;; ;; Convergence Threshold Constant
-;; (define-constant convergence-threshold u2)
+(define-constant bitflow-address 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG)
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -53,14 +52,14 @@
 ;; Admin Governance List
 (define-data-var admins (list 5 principal) (list tx-sender))
 
-;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
-(define-data-var buy-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
+;; Swap Fees (5 total bps initialized, 3 bps to LPs, 1 bps to Stacking DAO protocol, 1bps to Bitflow protocol)
+(define-data-var buy-fees {lps: uint, stacking-dao: uint, bitflow: uint} {lps: u3, stacking-dao: u1, bitflow: u1})
 
-;; Swap Fees (5 total bps initialized, 3 bps to LPs, 2 bps to protocol)
-(define-data-var sell-fees {lps: uint, protocol: uint} {lps: u3, protocol: u2})
+;; Swap Fees (5 total bps initialized, 3 bps to LPs, 1 bps to Stacking DAO protocol, 1bps to Bitflow protocol)
+(define-data-var sell-fees {lps: uint, stacking-dao: uint, bitflow: uint} {lps: u3, stacking-dao: u1, bitflow: u1})
 
 ;; Admin Swap Fees - Set to Zero
-(define-data-var admin-swap-fees {lps: uint, protocol: uint} {lps: u0, protocol: u0})
+(define-data-var admin-swap-fees {lps: uint, stacking-dao: uint, bitflow: uint} {lps: u0, stacking-dao: u0, bitflow: u0})
 
 ;; Liquidity Fees (3 bps initialized, all to protocol)
 (define-data-var liquidity-fees uint u3)
@@ -142,8 +141,9 @@
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
             (swap-fee-lps (get lps (var-get sell-fees)))
-            (swap-fee-protocol (get protocol (var-get sell-fees)))
-            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+            (swap-fee-stacking-dao (get stacking-dao (var-get sell-fees)))
+            (swap-fee-bitflow (get bitflow (var-get sell-fees)))
+            (total-swap-fee (+ swap-fee-lps swap-fee-stacking-dao swap-fee-bitflow))
 
             ;; Scale up balances to perform AMM calculations with get-x
             (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
@@ -159,8 +159,9 @@
             ;; Apply fees on the delta in x
             (dx-without-fees (- current-balance-x new-x)) 
             (x-amount-fee-lps (/ (* dx-without-fees swap-fee-lps) u10000))
-            (x-amount-fee-protocol (/ (* dx-without-fees swap-fee-protocol) u10000))
-            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-protocol)))
+            (x-amount-fee-stacking-dao (/ (* dx-without-fees swap-fee-stacking-dao) u10000))
+            (x-amount-fee-bitflow (/ (* dx-without-fees swap-fee-bitflow) u10000))
+            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-stacking-dao x-amount-fee-bitflow)))
         )
         (ok dx)
     )
@@ -226,8 +227,9 @@
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
             (swap-fee-lps (get lps (var-get buy-fees)))
-            (swap-fee-protocol (get protocol (var-get buy-fees)))
-            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+            (swap-fee-stacking-dao (get stacking-dao (var-get buy-fees)))
+            (swap-fee-bitflow (get bitflow (var-get buy-fees)))
+            (total-swap-fee (+ swap-fee-lps swap-fee-stacking-dao swap-fee-bitflow))
 
 
             ;; Scale up balances to perform AMM calculations with get-y
@@ -237,17 +239,16 @@
             (scaled-up-swap-amount (get-scaled-up-token-amounts x-amount u0 x-decimals y-decimals))
             (x-amount-scaled (get scaled-x scaled-up-swap-amount))
             (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
-            (x-amount-fees-protocol-scaled (/ (* x-amount-scaled swap-fee-protocol) u10000))
+            (x-amount-fees-stacking-dao-scaled (/ (* x-amount-scaled swap-fee-stacking-dao) u10000))
+            (x-amount-fees-bitflow-scaled (/ (* x-amount-scaled swap-fee-bitflow) u10000))
             (x-amount-total-fees-scaled (/ (* x-amount total-swap-fee) u10000))
             (updated-x-amount-scaled (- x-amount-scaled x-amount-total-fees-scaled))
             (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
             (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
             
-            ;; Scale down to precise amounts for y and dy, as well as x-amount-fee-lps, and x-amount-fee-protocol
+            ;; Scale down to precise amounts for y and dy, as well as x-amount-fee-lps, and x-amount-fee-stacking-dao
             (new-y (get scaled-y (get-scaled-down-token-amounts u0 new-y-scaled x-decimals y-decimals)))
             (dy (- current-balance-y new-y))
-            (x-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts x-amount-fees-lps-scaled u0 x-decimals y-decimals)))
-            (x-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts x-amount-fees-protocol-scaled u0 x-decimals y-decimals)))
         )
         (ok dy)
     )
@@ -328,11 +329,15 @@
                 (get lps (var-get buy-fees))
                 (get lps (var-get admin-swap-fees))
             ))
-            (swap-fee-protocol (if (is-some (index-of (var-get admins) tx-sender ))
-                (get protocol (var-get buy-fees))
-                (get protocol (var-get admin-swap-fees))
+            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) tx-sender ))
+                (get stacking-dao (var-get buy-fees))
+                (get stacking-dao (var-get admin-swap-fees))
             ))
-            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+            (swap-fee-bitflow (if (is-some (index-of (var-get admins) tx-sender ))
+                (get bitflow (var-get buy-fees))
+                (get bitflow (var-get admin-swap-fees))
+            ))
+            (total-swap-fee (+ swap-fee-lps swap-fee-stacking-dao swap-fee-bitflow))
 
             ;; Scale up balances and the swap amount to perform AMM calculations with get-y
             (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
@@ -341,17 +346,19 @@
             (scaled-up-swap-amount (get-scaled-up-token-amounts x-amount u0 x-decimals y-decimals))
             (x-amount-scaled (get scaled-x scaled-up-swap-amount))
             (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
-            (x-amount-fees-protocol-scaled (/ (* x-amount-scaled swap-fee-protocol) u10000))
-            (updated-x-amount-scaled (- x-amount-scaled (+ x-amount-fees-lps-scaled x-amount-fees-protocol-scaled)))
+            (x-amount-fees-stacking-dao-scaled (/ (* x-amount-scaled swap-fee-stacking-dao) u10000))
+            (x-amount-fees-bitflow-scaled (/ (* x-amount-scaled swap-fee-bitflow) u10000))
+            (updated-x-amount-scaled (- x-amount-scaled (+ x-amount-fees-lps-scaled x-amount-fees-stacking-dao-scaled x-amount-fees-bitflow-scaled)))
             (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
             (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
             
-            ;; Scale down to precise amounts for y and dy, as well as x-amount-fee-lps, and x-amount-fee-protocol
+            ;; Scale down to precise amounts for y and dy, as well as updated-x-amount and x-fees
             (new-y (get scaled-y (get-scaled-down-token-amounts u0 new-y-scaled x-decimals y-decimals)))
             (dy (- current-balance-y new-y))
             (x-amount-fee-lps (get scaled-x (get-scaled-down-token-amounts x-amount-fees-lps-scaled u0 x-decimals y-decimals)))
-            (x-amount-fee-protocol (get scaled-x (get-scaled-down-token-amounts x-amount-fees-protocol-scaled u0 x-decimals y-decimals)))
-            (updated-x-amount (- x-amount (+ x-amount-fee-lps x-amount-fee-protocol)))
+            (x-amount-fee-stacking-dao (get scaled-x (get-scaled-down-token-amounts x-amount-fees-stacking-dao-scaled u0 x-decimals y-decimals)))
+            (x-amount-fee-bitflow (get scaled-x (get-scaled-down-token-amounts x-amount-fees-bitflow-scaled u0 x-decimals y-decimals)))
+            (updated-x-amount (- x-amount (+ x-amount-fee-lps x-amount-fee-stacking-dao x-amount-fee-bitflow)))
             (updated-x-balance (+ current-balance-x updated-x-amount))
         )
 
@@ -372,13 +379,19 @@
 
         ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
         (if (> x-amount-fee-lps u0) 
-            (unwrap! (stx-transfer? x-amount-fee-lps swapper (var-get staking-and-rewards-contract)) (err "err-transferring-token-x-fee"))
+            (unwrap! (stx-transfer? x-amount-fee-lps swapper (var-get staking-and-rewards-contract)) (err "err-transferring-token-x-fee-lps"))
             false
         )
 
-        ;; Transfer x-amount-fee-protocol tokens from tx-sender to protocol-address
-        (if (> x-amount-fee-protocol u0)
-            (unwrap! (stx-transfer? x-amount-fee-protocol swapper protocol-address) (err "err-transferring-token-x-fee-protocol"))
+        ;; Transfer x-amount-fee-stacking-dao tokens from tx-sender to stacking-dao-address
+        (if (> x-amount-fee-stacking-dao u0)
+            (unwrap! (stx-transfer? x-amount-fee-stacking-dao swapper stacking-dao-address) (err "err-transferring-token-x-fee-stacking-dao"))
+            false
+        )
+
+        ;; Transfer x-amount-fee-biflow tokens from tx-sender to bitflow-address
+        (if (> x-amount-fee-bitflow u0)
+            (unwrap! (stx-transfer? x-amount-fee-bitflow swapper bitflow-address) (err "err-transferring-token-x-fee-bitflow"))
             false
         )
 
@@ -436,11 +449,15 @@
                 (get lps (var-get sell-fees))
                 (get lps (var-get admin-swap-fees))
             ))
-            (swap-fee-protocol (if (is-some (index-of (var-get admins) tx-sender ))
-                (get protocol (var-get sell-fees))
-                (get protocol (var-get admin-swap-fees))
+            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) tx-sender ))
+                (get stacking-dao (var-get sell-fees))
+                (get stacking-dao (var-get admin-swap-fees))
             ))
-            (total-swap-fee (+ swap-fee-lps swap-fee-protocol))
+            (swap-fee-bitflow (if (is-some (index-of (var-get admins) tx-sender ))
+                (get bitflow (var-get sell-fees))
+                (get bitflow (var-get admin-swap-fees))
+            ))
+            (total-swap-fee (+ swap-fee-lps swap-fee-stacking-dao))
 
             ;; Scale up balances and the swap amount to perform AMM calculations with get-x
             (scaled-up-balances (get-scaled-up-token-amounts current-balance-x current-balance-y x-decimals y-decimals))
@@ -456,8 +473,9 @@
             ;; Apply fees on the delta in x
             (dx-without-fees (- current-balance-x new-x)) 
             (x-amount-fee-lps (/ (* dx-without-fees swap-fee-lps) u10000))
-            (x-amount-fee-protocol (/ (* dx-without-fees swap-fee-protocol) u10000))
-            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-protocol)))
+            (x-amount-fee-stacking-dao (/ (* dx-without-fees swap-fee-stacking-dao) u10000))
+            (x-amount-fee-bitflow (/ (* dx-without-fees swap-fee-bitflow) u10000))
+            (dx (- dx-without-fees (+ x-amount-fee-lps x-amount-fee-stacking-dao x-amount-fee-bitflow)))
         )
 
         ;; Assert that pair is approved
@@ -481,9 +499,15 @@
             false
         )
 
-        ;; Transfer x-amount-fee-protocol tokens from this-contract to protocol-address
-        (if (> x-amount-fee-protocol u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-protocol tx-sender protocol-address)) (err "err-transferring-token-x-protocol-fee"))
+        ;; Transfer x-amount-fee-stacking-dao tokens from this-contract to stacking-dao-address
+        (if (> x-amount-fee-stacking-dao u0) 
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-stacking-dao tx-sender stacking-dao-address)) (err "err-transferring-token-x-stacking-dao-fee"))
+            false
+        )
+
+        ;; Transfer x-amount-fee-bitflow tokens from this-contract to bitflow-address
+        (if (> x-amount-fee-bitflow u0) 
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-bitflow tx-sender bitflow-address)) (err "err-transferring-token-x-bitflow-fee"))
             false
         )
 
@@ -615,14 +639,14 @@
             false
         )
         
-        ;; Transfer x-fees tokens from tx-sender to protocol-address
+        ;; Transfer x-fees tokens from tx-sender to bitflow-address
         (if (> x-fee u0)
-            (unwrap! (stx-transfer? x-fee liquidity-provider protocol-address) (err "err-transferring-token-x-protocol"))
+            (unwrap! (stx-transfer? x-fee liquidity-provider bitflow-address) (err "err-transferring-token-x-protocol"))
             false
         )
-         ;; Transfer y-fees tokens from tx-sender to protocol-address
+         ;; Transfer y-fees tokens from tx-sender to bitflow-address
         (if (> y-fee u0)
-            (unwrap! (contract-call? y-token transfer y-fee liquidity-provider protocol-address none) (err "err-transferring-token-y-protocol"))
+            (unwrap! (contract-call? y-token transfer y-fee liquidity-provider bitflow-address none) (err "err-transferring-token-y-protocol"))
             false
         )
 
@@ -942,7 +966,7 @@
 )
 
 ;; Change Swap Fee
-(define-public (change-buy-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+(define-public (change-buy-fee (new-lps-fee uint) (new-protocol-fee uint) (new-bitflow-fee uint)) 
     (let 
         (
             (current-admins (var-get admins))
@@ -950,12 +974,12 @@
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
-        (ok (var-set buy-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+        (ok (var-set buy-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
 )
 
 ;; Change Swap Fee
-(define-public (change-sell-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+(define-public (change-sell-fee (new-lps-fee uint) (new-protocol-fee uint) (new-bitflow-fee uint)) 
     (let 
         (
             (current-admins (var-get admins))
@@ -963,12 +987,12 @@
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
-        (ok (var-set sell-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+        (ok (var-set buy-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
 )
 
 ;; Change Swap Fee
-(define-public (change-admin-swap-fee (new-lps-fee uint) (new-protocol-fee uint)) 
+(define-public (change-admin-swap-fee (new-lps-fee uint) (new-protocol-fee uint) (new-bitflow-fee uint)) 
     (let 
         (
             (current-admins (var-get admins))
@@ -976,7 +1000,7 @@
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
-        (ok (var-set admin-swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
+        (ok (var-set admin-swap-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
 )
 
