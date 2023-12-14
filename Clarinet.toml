@@ -5,8 +5,8 @@ authors = []
 telemetry = false
 cache_dir = './.cache'
 requirements = []
-[contracts.staking-and-rewards-stackingDAO]
-path = 'contracts/staking-and-rewards-stackingDAO.clar'
+[contracts.lp-token]
+path = 'contracts/lp-token.clar'
 clarity_version = 2
 epoch = 2.1
 
@@ -35,6 +35,21 @@ path = 'contracts/staking-and-rewards.clar'
 clarity_version = 2
 epoch = 2.1
 
+[contracts.staking-and-rewards-stackingDAO]
+path = 'contracts/staking-and-rewards-stackingDAO.clar'
+clarity_version = 2
+epoch = 2.1
+
+[contracts.ststx-token]
+path = 'contracts/external/ststx-token.clar'
+clarity_version = 2
+epoch = 2.1
+
+[contracts.stx-ststx-lp-token]
+path = 'contracts/external/stx-ststx-lp-token.clar'
+clarity_version = 2
+epoch = 2.1
+
 [contracts.susdt-token]
 path = 'contracts/external/susdt-token.clar'
 clarity_version = 2
@@ -42,11 +57,6 @@ epoch = 2.1
 
 [contracts.usda-susdt-lp-token]
 path = 'contracts/external/usda-susdt-lp-token.clar'
-clarity_version = 2
-epoch = 2.1
-
-[contracts.lp-token]
-path = 'contracts/lp-token.clar'
 clarity_version = 2
 epoch = 2.1
 

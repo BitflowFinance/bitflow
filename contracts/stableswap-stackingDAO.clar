@@ -42,7 +42,7 @@
 ;;;;;;;;;;;;;;;
 
 ;; Contract for Stableswap Staking and Rewards
-(define-data-var staking-and-rewards-contract principal .earn-stackingDAO)
+(define-data-var staking-and-rewards-contract principal .staking-and-rewards-stackingDAO)
 
 ;; Contract for the Stacking DAO to receive fees
 (define-data-var stacking-dao-contract principal 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
