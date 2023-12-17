@@ -38,6 +38,9 @@
 ;; Contract for Stableswap Staking and Rewards
 (define-data-var staking-and-rewards-contract principal .staking-and-rewards)
 
+;; Define a variable to track whether the staking-and-rewards contract has been set
+(define-data-var staking-and-rewards-contract-is-set bool false)
+
 ;;;;;;;;;;;;
 ;; Errors ;;
 ;;;;;;;;;;;;
@@ -1007,13 +1010,20 @@
     (let 
         (
             (current-admins (var-get admins))
+            (is-set (var-get staking-and-rewards-contract-is-set))
         )
 
         ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
 
+        ;; Assert that the staking-and-rewards contract has not already been set
+        (asserts! (not is-set) (err "err-staking-and-rewards-contract-already-assigned"))
+
         ;; Set contract for handling staking and rewards
-        (ok (var-set staking-and-rewards-contract staking-contract))
+        (var-set staking-and-rewards-contract staking-contract)
+        (var-set staking-and-rewards-contract-is-set true)
+        
+        (ok staking-contract)
     )
 )
 
