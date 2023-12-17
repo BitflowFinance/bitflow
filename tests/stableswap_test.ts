@@ -98,7 +98,7 @@ Clarinet.test({
             Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(100)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -127,7 +127,8 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        console.log(block.receipts[0].result)
+        block.receipts[0].result.expectOk().expectUint(99949981)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -151,13 +152,15 @@ Clarinet.test({
             Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(1000000000000000), types.uint(10000000000000)], deployer.address)
         ]);
 
-        chain.mineBlock([
+        const block = chain.mineBlock([
             Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000000), types.uint(99940000)], deployer.address)
         ]);
 
         const call = chain.callReadOnlyFn("stableswap", "get-pair-data", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token")], deployer.address)
 
-        call.result.expectSome().expectTuple()
+        block.receipts[0].result.expectOk().expectUint(99949981)
+
+        // call.result.expectSome().expectTuple()
         console.log(JSON.stringify(call.result));
     },
 });
@@ -191,7 +194,7 @@ Clarinet.test({
             Tx.contractCall("stableswap", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000000000), types.uint(99940000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(99949822)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -573,7 +576,7 @@ Clarinet.test({
             Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(999500)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -602,7 +605,7 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9994998022)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -666,7 +669,7 @@ Clarinet.test({
             Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000000), types.uint(999998000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9994982196)
         console.log(JSON.stringify(block.receipts));
     },
 });

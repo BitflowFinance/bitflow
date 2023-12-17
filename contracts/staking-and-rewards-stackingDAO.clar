@@ -313,6 +313,7 @@
             {reward-claimed: true}
         ))
 
+        ;; Return the number X tokens received after claiming staking rewards from a particular cycle
         (ok {x-token-reward: param-cycle-x-rewards})
     )
 )
@@ -333,10 +334,13 @@
         )
 
         ;; Transfer rewards from the contract to the claimer
-        (ok (if (> rewards-to-claim-x u0)
+        (if (> rewards-to-claim-x u0)
             (unwrap! (as-contract (stx-transfer? rewards-to-claim-x contract-caller claimer)) (err "err-x-token-transfer-failed"))
             false
-        ))
+        )
+
+        ;; Return the number X tokens and Y tokens received after claiming all staking rewards
+        (ok {x-token-reward: rewards-to-claim-x})
 
     )
 )
@@ -417,6 +421,8 @@
         ))
         ;; Updating the total balance of LP tokens staked in this contract
         (map-set TotalStakedPerPairMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: updated-total-currently-staked})
+
+        ;; Return the number of LP tokens user receives that were no longer staked in any current or upcoming cycles
         (ok lp-tokens-to-unstake)
 
     )

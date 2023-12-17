@@ -99,7 +99,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9995)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -128,7 +128,7 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9994802280)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -192,7 +192,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000), types.uint(99940000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9993220448)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -574,7 +574,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9995)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -603,7 +603,7 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(9994802183)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -667,7 +667,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(1000000000), types.uint(999400000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectBool(true)
+        block.receipts[0].result.expectOk().expectUint(999482190)
         console.log(JSON.stringify(block.receipts));
     },
 });

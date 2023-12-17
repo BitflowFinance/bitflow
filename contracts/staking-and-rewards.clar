@@ -336,6 +336,7 @@
             {reward-claimed: true}
         ))
 
+        ;; Return the number X tokens and Y tokens received after claiming staking rewards from a particular cycle
         (ok {x-token-reward: param-cycle-x-rewards, y-token-reward: param-cycle-y-rewards})
     )
 )
@@ -357,25 +358,27 @@
         )
 
         ;; Check if one of the param-cycle-x or param-cycle-y rewards is equal to 0
-        (ok (if (or (is-eq rewards-to-claim-x u0) (is-eq rewards-to-claim-y u0))
-                ;; One of them is equal to 0, only transfer the other
-                (if (is-eq rewards-to-claim-x u0)
-                    ;; param-cycle-x-rewards is equal to 0, transfer param-cycle-y-rewards from contract to user
-                    (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y contract-caller claimer none)) (err "err-y-token-transfer-failed"))
-                    ;; param-cycle-y-rewards is equal to 0, transfer param-cycle-x-rewards from contract to user
-                    (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x contract-caller claimer none)) (err "err-x-token-transfer-failed"))
-                )
-                ;; Neither of them are equal to 0, transfer both
-                (begin 
-                    
-                    ;; Transfer param-cycle-x-rewards from contract to user
-                    (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x contract-caller claimer none)) (err "err-x-token-transfer-failed"))
+        (if (or (is-eq rewards-to-claim-x u0) (is-eq rewards-to-claim-y u0))
+            ;; One of them is equal to 0, only transfer the other
+            (if (is-eq rewards-to-claim-x u0)
+                ;; param-cycle-x-rewards is equal to 0, transfer param-cycle-y-rewards from contract to user
+                (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y contract-caller claimer none)) (err "err-y-token-transfer-failed"))
+                ;; param-cycle-y-rewards is equal to 0, transfer param-cycle-x-rewards from contract to user
+                (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x contract-caller claimer none)) (err "err-x-token-transfer-failed"))
+            )
+            ;; Neither of them are equal to 0, transfer both
+            (begin 
+                
+                ;; Transfer param-cycle-x-rewards from contract to user
+                (unwrap! (as-contract (contract-call? x-token transfer rewards-to-claim-x contract-caller claimer none)) (err "err-x-token-transfer-failed"))
 
-                    ;; Transfer param-cycle-y-rewards from contract to user
-                    (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y contract-caller claimer none)) (err "err-y-token-transfer-failed"))
-                )
+                ;; Transfer param-cycle-y-rewards from contract to user
+                (unwrap! (as-contract (contract-call? y-token transfer rewards-to-claim-y contract-caller claimer none)) (err "err-y-token-transfer-failed"))
             )
         )
+
+        ;; Return the number X tokens and Y tokens received after claiming all staking rewards
+        (ok {x-token-reward: rewards-to-claim-x, y-token-reward: rewards-to-claim-y})
     )
 )
 
@@ -464,6 +467,8 @@
         ))
         ;; Updating the total balance of LP tokens staked in this contract
         (map-set TotalStakedPerPairMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {total-staked: updated-total-currently-staked})
+        
+        ;; Return the number of LP tokens user receives that were no longer staked in any current or upcoming cycles
         (ok lp-tokens-to-unstake)
 
     )

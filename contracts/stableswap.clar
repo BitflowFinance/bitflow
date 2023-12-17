@@ -388,7 +388,7 @@
         ))
 
         ;; Match if map-get? returns some for CycleDataMap
-        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+        (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
             cycle-data
                 ;; Update CycleDataMap
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
@@ -401,9 +401,11 @@
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
                     cycle-fee-balance-x: x-amount-fee-lps,
                     cycle-fee-balance-y: u0,
-                })
-            
-        ))
+                }) 
+        )
+
+        ;; Return the number of y tokens returned from the swap
+        (ok dy)
 
     )
 )
@@ -490,7 +492,7 @@
         ))
 
         ;; Match if map-get? returns some for CycleDataMap
-        (ok (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
+        (match (map-get? CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)})
             cycle-data
                 ;; Update CycleDataMap
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} (merge 
@@ -503,9 +505,11 @@
                 (map-set CycleDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token), cycle-num: (get-current-cycle)} {
                     cycle-fee-balance-x: u0,
                     cycle-fee-balance-y: y-amount-fee-lps,
-                })
-            
-        ))
+                }) 
+        )
+
+        ;; Return the number of x tokens returned from the swap
+        (ok dx)
 
     )
 )
@@ -617,7 +621,7 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
+        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} 
             (merge 
                 current-pair 
                 {
@@ -626,8 +630,10 @@
                     total-shares: (+ current-total-shares (/ (* current-total-shares (- d2 d0)) d0)),
                     d: d2
                 }
-            ))
-        )
+        ))
+
+        ;; Return the number of LP tokens minted
+        (ok (/ (* current-total-shares (- d2 d0)) d0))
     )
 )
 
@@ -675,7 +681,7 @@
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
-        (ok (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
+        (map-set PairsDataMap {x-token: (contract-of x-token), y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
             current-pair 
             {
                 balance-x: new-balance-x,
@@ -683,7 +689,10 @@
                 total-shares: (- current-total-shares lp-amount),
                 d: new-d
             }
-        )))
+        ))
+
+        ;; Return the number X tokens and Y tokens received after withdrawing from pool
+        (ok {withdrawal-x-balance: withdrawal-balance-x, withdrawal-y-balance: withdrawal-balance-y})
     )
 )
 
