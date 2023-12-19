@@ -94,7 +94,7 @@
             (claimer contract-caller)
         )
 
-        ;; Assert that param-cycle-x or param-cycle-y rewards are greater than 0
+        ;; Assert that param-cycle-x rewards are greater than 0
         (asserts! (> param-cycle-x-rewards u0) (err u1))
 
         ;; Assert that param-cycle-reward-claimed is false
@@ -114,10 +114,7 @@
 
 ;; Stake LP Tokens
 ;; @desc: This function allows users to stake LP tokens for X cycles to earn rewards
-;; @param: x-token - The X token contract, y-token - The Y token contract, lp-token - The LP token contract, cycles - The number of cycles to stake for, lp-token-amount - The amount of LP tokens to stake
-;; minimal amount to stake?
-;; require amount by divisible by cycle length? or fine dumping remainder into last cycle?
-;; likely a less expensive way to deal with vars passed down to loops*
+;; @param: y-token - The Y token contract, lp-token - The LP token contract, cycles - The number of cycles to stake for, lp-token-amount - The amount of LP tokens to stake
 (define-public (stake-lp-tokens (y-token <sip-010-trait>) (lp-token <sip-010-trait>) (cycles uint) (amount uint))
     (let 
         (
@@ -280,7 +277,7 @@
 
 ;; Claim staking rewards per cycle
 ;; @desc: This function allows users to claim staking rewards for a given cycle
-;; @param: x-token - The X token contract, y-token - The Y token contract, lp-token - The LP token contract, cycle - The cycle to claim rewards for
+;; @param: y-token - The Y token contract, lp-token - The LP token contract, cycle - The cycle to claim rewards for
 (define-public (claim-cycle-staking-rewards (y-token principal) (lp-token principal) (y-token-trait <sip-010-trait>) (lp-token-trait <sip-010-trait>) (cycle uint))
     (let 
         (
@@ -295,7 +292,7 @@
             (claimer contract-caller)
         )
 
-        ;; Assert that param-cycle-x or param-cycle-y rewards are greater than 0
+        ;; Assert that param-cycle-x rewards are greater than 0
         (asserts! (> param-cycle-x-rewards u0) (err "err-no-x-rewards-to-claim"))
 
         ;; Assert that param-cycle-reward-claimed is false
@@ -320,7 +317,7 @@
 
 ;; Claim all staking rewards
 ;; @desc: This function allows users to claim all staking rewards
-;; @param: x-token - The X token contract, y-token - The Y token contract, lp-token - The LP token contract
+;; @param: y-token - The Y token contract, lp-token - The LP token contract
 (define-public (claim-all-staking-rewards (y-token <sip-010-trait>) (lp-token <sip-010-trait>))
     (let 
         (
@@ -339,7 +336,7 @@
             false
         )
 
-        ;; Return the number X tokens and Y tokens received after claiming all staking rewards
+        ;; Return the number X tokens received after claiming all staking rewards
         (ok {x-token-reward: rewards-to-claim-x})
 
     )

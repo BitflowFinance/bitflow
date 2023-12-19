@@ -32,7 +32,10 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
-;; Test Protocol Address
+;; Contract deployer
+(define-constant contract-deployer contract-caller)
+
+;; Protocol Address
 (define-constant protocol-address 'ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5)
 
 ;; Contract for Stableswap Staking and Rewards
@@ -932,6 +935,9 @@
 
     ;; asserts param principal (removeable whitelist) already exist
     (asserts! (is-eq removeable-principal-position-in-list) (err "err-not-whitelisted"))
+
+    ;; asserts the initial contract deployer cannot be removed from admin list to protect against rogue admins
+    (asserts! (not (is-eq admin contract-deployer)) (err "err-cannot-remove-contract-deployer"))
 
     ;; temporary var set to help remove param principal
     (var-set helper-principal admin)

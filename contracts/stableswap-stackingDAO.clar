@@ -32,6 +32,9 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
+;; Contract deployer
+(define-constant contract-deployer contract-caller)
+
 ;;;;;;;;;;;;
 ;; Errors ;;
 ;;;;;;;;;;;;
@@ -172,7 +175,6 @@
 )
 
 ;; Get X
-;; Maybe move into get-dx?
 (define-read-only (get-x (y-bal uint) (x-bal uint) (y-amount uint) (ann uint))
     (let 
         (
@@ -259,7 +261,6 @@
 )
 
 ;; Get Y
-;; Maybe move into get-dy?
 (define-read-only (get-y (x-bal uint) (y-bal uint) (x-amount uint) (ann uint))
     (let 
         (
@@ -317,7 +318,7 @@
 
 ;; Swap X -> Y
 ;; @desc: Swaps X token for Y token
-;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount: uint, min-y-amount: uint
+;; @params:  y-token: principal, lp-token: principal, x-amount: uint, min-y-amount: uint
 (define-public (swap-x-for-y (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
     (let 
         (
@@ -439,7 +440,7 @@
 )
 ;; Swap Y -> X
 ;; @desc: Swaps Y token for X token
-;; @params: y-token: principal, x-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
+;; @params: y-token: principal, lp-token: principal, x-amount: uint, min-x-amount: uint
 (define-public (swap-y-for-x (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
@@ -564,7 +565,7 @@
 
 ;; Add Liquidity
 ;; @desc: Adds liquidity to a pair, mints the appropriate amount of LP tokens
-;; @params: x-token: principal, y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
+;; @params:  y-token: principal, lp-token: principal, x-amount-added: uint, y-amount-added: uint
 (define-public (add-liquidity (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount-added uint) (y-amount-added uint) (min-lp-amount uint) )
     (let 
         (
@@ -681,7 +682,7 @@
 
 ;; Withdraw Liquidity
 ;; @desc: Withdraws liquidity from both pairs & burns the appropriate amount of LP tokens
-;; @params: x-token: principal, y-token: principal, lp-token: principal, lp-amount: uint, min-x-amount: uint, min-y-amount: uint
+;; @params:  y-token: principal, lp-token: principal, lp-amount: uint, min-x-amount: uint, min-y-amount: uint
 (define-public (withdraw-liquidity (y-token <sip-010-trait>) (lp-token <lp-trait>) (lp-amount uint) (min-x-amount uint) (min-y-amount uint))
     (let 
         (
@@ -861,8 +862,7 @@
 
 ;; Create Pair
 ;; @desc: Creates a new pair for trading
-;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint, pair-name: string, x-balance: uint, y-balance: uint
-;; initial-balance param is for TOTAL balance of x + y tokens (aka 2x or 2y or (x + y))
+;; @params:  y-token: principal, lp-token: principal, amplification-coefficient: uint, pair-name: string, x-balance: uint, y-balance: uint
 (define-public (create-pair (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
     (let 
         (
@@ -912,7 +912,7 @@
 
 ;; Setting Pair Approval
 ;; @desc: Sets the approval of a pair
-;; @params: x-token: principal, y-token: principal, lp-token: principal, approval: bool
+;; @params:  y-token: principal, lp-token: principal, approval: bool
 (define-public (set-pair-approval (y-token <sip-010-trait>) (lp-token <lp-trait>) (approval bool))
     (let 
         (
@@ -967,6 +967,9 @@
 
     ;; asserts param principal (removeable whitelist) already exist
     (asserts! (is-eq removeable-principal-position-in-list) (err "err-not-whitelisted"))
+
+    ;; asserts the initial contract deployer cannot be removed from admin list to protect against rogue admins
+    (asserts! (not (is-eq admin contract-deployer)) (err "err-cannot-remove-contract-deployer"))
 
     ;; temporary var set to help remove param principal
     (var-set helper-principal admin)
@@ -1031,7 +1034,7 @@
 )
 
 ;; Admins can change the amplification coefficient in PairsDataMap
-;; @params: x-token: principal, y-token: principal, lp-token: principal, amplification-coefficient: uint
+;; @params:  y-token: principal, lp-token: principal, amplification-coefficient: uint
 (define-public (change-amplification-coefficient (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint))
     (let 
         (
