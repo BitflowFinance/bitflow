@@ -966,7 +966,7 @@
     (asserts! (is-some caller-principal-position-in-list) (err "err-not-auth"))
 
     ;; asserts param principal (removeable whitelist) already exist
-    (asserts! (is-eq removeable-principal-position-in-list) (err "err-not-whitelisted"))
+    (asserts! (is-some removeable-principal-position-in-list) (err "err-not-whitelisted"))
 
     ;; asserts the initial contract deployer cannot be removed from admin list to protect against rogue admins
     (asserts! (not (is-eq admin contract-deployer)) (err "err-cannot-remove-contract-deployer"))
