@@ -135,6 +135,34 @@ Clarinet.test({
 
 // Test swap x for y
 Clarinet.test({
+    name: "Ensure we can swap x-token for y-token",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000), types.uint(99940000)], deployer.address)
+        ]);
+        const call = chain.callReadOnlyFn("stableswap-stackingDAO", "get-dy", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(1000000)], deployer.address)
+
+        console.log("get-dy: ", call.results)
+
+        // block.receipts[0].result.expectOk().expectUint(9994802280)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+
+// Test swap x for y
+Clarinet.test({
     name: "Ensure we can swap x-token for y-token get pair data back",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         const deployer = accounts.get("deployer")!;
