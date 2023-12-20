@@ -52,7 +52,7 @@
 
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
-    (asserts! (is-eq tx-sender sender) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq contract-caller sender) ERR-NOT-AUTHORIZED)
 
     (match (ft-transfer? stx-ststx-lp amount sender recipient)
       response (begin
@@ -76,7 +76,7 @@
 
 (define-public (burn (burner principal) (amount uint))
   (begin
-    (asserts! (is-eq tx-sender burner) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq contract-caller burner) ERR-NOT-AUTHORIZED)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-burn? stx-ststx-lp amount burner)
@@ -86,7 +86,7 @@
 ;; Change the minter to any other principal, can only be called the current minter
 (define-public (set-minter (who principal))
   (begin
-    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq contract-caller CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     ;; who is unchecked, we allow the owner to make whoever they like the new minter
     ;; #[allow(unchecked_data)]
     (ok (var-set approved-minter who))
