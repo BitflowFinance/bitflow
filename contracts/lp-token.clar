@@ -15,7 +15,7 @@
 
 ;;vars
 (define-data-var token-uri (string-utf8 256) u"")
-(define-data-var approved-minter principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap)
+(define-data-var approved-supply-controller principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap)
 
 
 ;; ---------------------------------------------------------
@@ -52,7 +52,7 @@
 
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
-    (asserts! (is-eq contract-caller sender) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq tx-sender sender) ERR-NOT-AUTHORIZED)
 
     (match (ft-transfer? usda-susdt-lp amount sender recipient)
       response (begin
@@ -66,7 +66,7 @@
 
 (define-public (mint (who principal) (amount uint))
   (begin
-    (asserts! (is-eq contract-caller (var-get approved-minter)) ERR-UNAUTHORIZED-MINT)
+    (asserts! (is-eq contract-caller (var-get approved-supply-controller)) ERR-UNAUTHORIZED-MINT)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-mint? usda-susdt-lp amount who)
@@ -76,20 +76,20 @@
 
 (define-public (burn (burner principal) (amount uint))
   (begin
-    (asserts! (is-eq contract-caller burner) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq contract-caller (var-get approved-supply-controller)) ERR-NOT-AUTHORIZED)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-burn? usda-susdt-lp amount burner)
   )
 )
 
-;; Change the minter to any other principal, can only be called the current minter
-(define-public (set-minter (who principal))
+;; Change the supply-controller to any other principal, can only be called the current supply-controller
+(define-public (set-supply-controller (who principal))
   (begin
     (asserts! (is-eq contract-caller CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     ;; who is unchecked, we allow the owner to make whoever they like the new minter
     ;; #[allow(unchecked_data)]
-    (ok (var-set approved-minter who))
+    (ok (var-set approved-supply-controller who))
   )
 )
 
