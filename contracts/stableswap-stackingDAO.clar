@@ -1003,7 +1003,7 @@
         ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
 
-        (ok (var-set buy-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
+        (ok (var-set sell-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
 )
 
