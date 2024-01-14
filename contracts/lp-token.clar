@@ -66,7 +66,7 @@
 
 (define-public (mint (who principal) (amount uint))
   (begin
-    (asserts! (is-eq contract-caller (var-get approved-supply-controller)) ERR-UNAUTHORIZED-MINT)
+    (asserts! (is-eq tx-sender (var-get approved-supply-controller)) ERR-UNAUTHORIZED-MINT)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-mint? usda-susdt-lp amount who)
@@ -76,7 +76,7 @@
 
 (define-public (burn (burner principal) (amount uint))
   (begin
-    (asserts! (is-eq contract-caller (var-get approved-supply-controller)) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq tx-sender burner) ERR-NOT-AUTHORIZED)
     ;; amount & who are unchecked, but we let the contract owner mint to whoever they like for convenience
     ;; #[allow(unchecked_data)]
     (ft-burn? usda-susdt-lp amount burner)
@@ -86,7 +86,7 @@
 ;; Change the supply-controller to any other principal, can only be called the current supply-controller
 (define-public (set-supply-controller (who principal))
   (begin
-    (asserts! (is-eq contract-caller CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     ;; who is unchecked, we allow the owner to make whoever they like the new minter
     ;; #[allow(unchecked_data)]
     (ok (var-set approved-supply-controller who))

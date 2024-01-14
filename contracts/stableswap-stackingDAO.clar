@@ -18,7 +18,7 @@
 ;;;;;;;;;;;;;;;
 
 ;; This contract address
-(define-constant this-contract (as-contract contract-caller))
+(define-constant this-contract (as-contract tx-sender))
 
 ;; Deployment height
 (define-constant deployment-height block-height)
@@ -33,7 +33,7 @@
 (define-constant number-of-tokens u2)
 
 ;; Contract deployer
-(define-constant contract-deployer contract-caller)
+(define-constant contract-deployer tx-sender)
 
 ;;;;;;;;;;;;
 ;; Errors ;;
@@ -57,7 +57,7 @@
 (define-data-var bitflow-contract principal 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG)
 
 ;; Admin Governance List
-(define-data-var admins (list 5 principal) (list contract-caller))
+(define-data-var admins (list 5 principal) (list tx-sender))
 
 ;; Swap Fees (5 total bps initialized, 3 bps to LPs, 1 bps to Stacking DAO protocol, 1bps to Bitflow protocol)
 (define-data-var buy-fees {lps: uint, stacking-dao: uint, bitflow: uint} {lps: u3, stacking-dao: u1, bitflow: u1})
@@ -72,7 +72,7 @@
 (define-data-var liquidity-fees uint u3)
 
 ;; Helper var to remove admin
-(define-data-var helper-principal principal contract-caller)
+(define-data-var helper-principal principal tx-sender)
 
 ;; Convergence Threshold
 (define-data-var convergence-threshold uint u2)
@@ -322,7 +322,7 @@
 (define-public (swap-x-for-y (y-token <sip-010-trait>) (lp-token <lp-trait>) (x-amount uint) (min-y-amount uint)) 
     (let 
         (
-            (swapper contract-caller)
+            (swapper tx-sender)
             (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
@@ -330,15 +330,15 @@
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
             ;; Admins pay no fees on swaps
-            (swap-fee-lps (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-lps (if (is-some (index-of (var-get admins) tx-sender ))
                 (get lps (var-get buy-fees))
                 (get lps (var-get admin-swap-fees))
             ))
-            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) tx-sender ))
                 (get stacking-dao (var-get buy-fees))
                 (get stacking-dao (var-get admin-swap-fees))
             ))
-            (swap-fee-bitflow (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-bitflow (if (is-some (index-of (var-get admins) tx-sender ))
                 (get bitflow (var-get buy-fees))
                 (get bitflow (var-get admin-swap-fees))
             ))
@@ -376,33 +376,33 @@
         ;; Assert that dy is greater than min-y-amount
         (asserts! (> dy min-y-amount) (err "err-min-y-amount"))
 
-        ;; Transfer updated-x-amount tokens from contract-caller to this contract
+        ;; Transfer updated-x-amount tokens from tx-sender to this contract
         (if (> updated-x-amount u0) 
-            (unwrap! (stx-transfer? updated-x-amount swapper (as-contract contract-caller)) (err "err-transferring-token-x"))
+            (unwrap! (stx-transfer? updated-x-amount swapper (as-contract tx-sender)) (err "err-transferring-token-x"))
             false
         )
 
-        ;; Transfer x-amount-fee-lps tokens from contract-caller to staking-and-rewards-contract
+        ;; Transfer x-amount-fee-lps tokens from tx-sender to staking-and-rewards-contract
         (if (> x-amount-fee-lps u0) 
             (unwrap! (stx-transfer? x-amount-fee-lps swapper (var-get staking-and-rewards-contract)) (err "err-transferring-token-x-fee-lps"))
             false
         )
 
-        ;; Transfer x-amount-fee-stacking-dao tokens from contract-caller to stacking-dao-address
+        ;; Transfer x-amount-fee-stacking-dao tokens from tx-sender to stacking-dao-address
         (if (> x-amount-fee-stacking-dao u0)
             (unwrap! (stx-transfer? x-amount-fee-stacking-dao swapper (var-get stacking-dao-contract)) (err "err-transferring-token-x-fee-stacking-dao"))
             false
         )
 
-        ;; Transfer x-amount-fee-biflow tokens from contract-caller to bitflow-address
+        ;; Transfer x-amount-fee-biflow tokens from tx-sender to bitflow-address
         (if (> x-amount-fee-bitflow u0)
             (unwrap! (stx-transfer? x-amount-fee-bitflow swapper (var-get bitflow-contract)) (err "err-transferring-token-x-fee-bitflow"))
             false
         )
 
-        ;; Transfer dy tokens from this contract to contract-caller
+        ;; Transfer dy tokens from this contract to tx-sender
         (if (> dy u0) 
-            (unwrap! (as-contract (contract-call? y-token transfer dy contract-caller swapper none)) (err "err-transferring-token-y")) 
+            (unwrap! (as-contract (contract-call? y-token transfer dy tx-sender swapper none)) (err "err-transferring-token-y")) 
             false
         )
 
@@ -444,7 +444,7 @@
 (define-public (swap-y-for-x (y-token <sip-010-trait>) (lp-token <lp-trait>) (y-amount uint) (min-x-amount uint)) 
     (let 
         (
-            (swapper contract-caller)
+            (swapper tx-sender)
             (pair-data (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval pair-data))
             (current-balance-x (get balance-x pair-data))
@@ -452,15 +452,15 @@
             (x-decimals (get x-decimals pair-data))
             (y-decimals (get y-decimals pair-data))
             ;; Admins pay no fees on swaps
-            (swap-fee-lps (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-lps (if (is-some (index-of (var-get admins) tx-sender ))
                 (get lps (var-get sell-fees))
                 (get lps (var-get admin-swap-fees))
             ))
-            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-stacking-dao (if (is-some (index-of (var-get admins) tx-sender ))
                 (get stacking-dao (var-get sell-fees))
                 (get stacking-dao (var-get admin-swap-fees))
             ))
-            (swap-fee-bitflow (if (is-some (index-of (var-get admins) contract-caller ))
+            (swap-fee-bitflow (if (is-some (index-of (var-get admins) tx-sender ))
                 (get bitflow (var-get sell-fees))
                 (get bitflow (var-get admin-swap-fees))
             ))
@@ -494,33 +494,33 @@
         ;; Assert that dx is greater than min-x-amount
         (asserts! (> dx min-x-amount) (err "err-min-x-amount"))
 
-        ;; Transfer y-amount tokens from contract-caller to this contract
+        ;; Transfer y-amount tokens from tx-sender to this contract
         (if (> y-amount u0) 
-            (unwrap! (contract-call? y-token transfer y-amount swapper (as-contract contract-caller) none) (err "err-transferring-token-y"))
+            (unwrap! (contract-call? y-token transfer y-amount swapper (as-contract tx-sender) none) (err "err-transferring-token-y"))
             false
         )
 
         ;; Transfer x-amount-fee-lps tokens from this-contract to staking-and-rewards-contract
         (if (> x-amount-fee-lps u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-lps contract-caller (var-get staking-and-rewards-contract))) (err "err-transferring-token-x-swap-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-lps tx-sender (var-get staking-and-rewards-contract))) (err "err-transferring-token-x-swap-fee"))
             false
         )
 
         ;; Transfer x-amount-fee-stacking-dao tokens from this-contract to stacking-dao-address
         (if (> x-amount-fee-stacking-dao u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-stacking-dao contract-caller (var-get stacking-dao-contract))) (err "err-transferring-token-x-stacking-dao-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-stacking-dao tx-sender (var-get stacking-dao-contract))) (err "err-transferring-token-x-stacking-dao-fee"))
             false
         )
 
         ;; Transfer x-amount-fee-bitflow tokens from this-contract to bitflow-address
         (if (> x-amount-fee-bitflow u0) 
-            (unwrap! (as-contract (stx-transfer? x-amount-fee-bitflow contract-caller (var-get bitflow-contract))) (err "err-transferring-token-x-bitflow-fee"))
+            (unwrap! (as-contract (stx-transfer? x-amount-fee-bitflow tx-sender (var-get bitflow-contract))) (err "err-transferring-token-x-bitflow-fee"))
             false
         )
 
-        ;; Transfer dx tokens from this contract to contract-caller
+        ;; Transfer dx tokens from this contract to tx-sender
         (if (> dx u0) 
-            (unwrap! (as-contract (stx-transfer? dx contract-caller swapper)) (err "err-transferring-token-x"))
+            (unwrap! (as-contract (stx-transfer? dx tx-sender swapper)) (err "err-transferring-token-x"))
             false
         )
 
@@ -570,7 +570,7 @@
     (let 
         (
             ;; Grabbing all data from PairsDataMap
-            (liquidity-provider contract-caller)
+            (liquidity-provider tx-sender)
             (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
             (current-approval (get approval current-pair))
             (x-decimals (get x-decimals current-pair))
@@ -636,30 +636,30 @@
         ;; Assert that derived mint amount is greater than min-lp-amount
         (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) min-lp-amount) (err "err-derived-amount-less-than-lp"))
 
-        ;; ;; Transfer x-amount-added tokens from contract-caller to this contract
+        ;; ;; Transfer x-amount-added tokens from tx-sender to this contract
         (if (> x-amount-added-updated u0)
-            (unwrap! (stx-transfer? x-amount-added-updated liquidity-provider (as-contract contract-caller)) (err "err-transferring-token-x-escrow"))
+            (unwrap! (stx-transfer? x-amount-added-updated liquidity-provider (as-contract tx-sender)) (err "err-transferring-token-x-escrow"))
             false
         )
 
-        ;; Transfer y-amount-added tokens from contract-caller to this contract
+        ;; Transfer y-amount-added tokens from tx-sender to this contract
         (if (> y-amount-added-updated u0)
-            (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract contract-caller) none) (err "err-transferring-token-y"))
+            (unwrap! (contract-call? y-token transfer y-amount-added-updated liquidity-provider (as-contract tx-sender) none) (err "err-transferring-token-y"))
             false
         )
         
-        ;; Transfer x-fees tokens from contract-caller to bitflow-address
+        ;; Transfer x-fees tokens from tx-sender to bitflow-address
         (if (> x-fee u0)
             (unwrap! (stx-transfer? x-fee liquidity-provider (var-get bitflow-contract)) (err "err-transferring-token-x-protocol"))
             false
         )
-         ;; Transfer y-fees tokens from contract-caller to bitflow-address
+         ;; Transfer y-fees tokens from tx-sender to bitflow-address
         (if (> y-fee u0)
             (unwrap! (contract-call? y-token transfer y-fee liquidity-provider (var-get bitflow-contract) none) (err "err-transferring-token-y-protocol"))
             false
         )
 
-        ;; Mint LP tokens to contract-caller
+        ;; Mint LP tokens to tx-sender
         (unwrap! (as-contract (contract-call? lp-token mint liquidity-provider (/ (* current-total-shares (- d2 d0)) d0))) (err "err-minting-lp-tokens"))
 
         ;; Update all appropriate maps
@@ -699,7 +699,7 @@
             (withdrawal-balance-y (/ (* current-balance-y lp-amount) current-total-shares))
             (new-balance-x (- current-balance-x withdrawal-balance-x))
             (new-balance-y (- current-balance-y withdrawal-balance-y))
-            (liquidity-remover contract-caller)
+            (liquidity-remover tx-sender)
             ;; get-D using the new-balance-x and new-balance-y
             (new-balances-scaled (get-scaled-up-token-amounts new-balance-x new-balance-y x-decimals y-decimals))
             (new-balance-x-scaled (get scaled-x new-balances-scaled))
@@ -713,13 +713,13 @@
         ;; Assert that withdrawal-balance-y is greater than min-y-amount
         (asserts! (> withdrawal-balance-y min-y-amount) (err "err-withdrawal-balance-y-less-than-min-y-amount"))
 
-        ;; Burn LP tokens from contract-caller
+        ;; Burn LP tokens from tx-sender
         (unwrap! (contract-call? lp-token burn liquidity-remover lp-amount) (err "err-burning-lp-tokens"))
 
         ;; Transfer withdrawal-balance-x tokens from this contract to liquidity-taker
-        (unwrap! (as-contract (stx-transfer? withdrawal-balance-x  contract-caller liquidity-remover)) (err "err-transferring-token-x"))
+        (unwrap! (as-contract (stx-transfer? withdrawal-balance-x  tx-sender liquidity-remover)) (err "err-transferring-token-x"))
         ;; Transfer withdrawal-balance-y tokens from this contract to liquidity-taker
-        (unwrap! (as-contract (contract-call? y-token transfer withdrawal-balance-y contract-caller liquidity-remover none)) (err "err-transferring-token-y"))
+        (unwrap! (as-contract (contract-call? y-token transfer withdrawal-balance-y tx-sender liquidity-remover none)) (err "err-transferring-token-y"))
 
         ;; Update all appropriate maps
         ;; Update PairsDataMap
@@ -866,7 +866,7 @@
 (define-public (create-pair (y-token <sip-010-trait>) (lp-token <lp-trait>) (amplification-coefficient uint) (pair-name (string-ascii 32)) (initial-x-bal uint) (initial-y-bal uint))
     (let 
         (
-            (lp-owner contract-caller)
+            (lp-owner tx-sender)
             (x-decimals u6) ;; STX token has precision of 6 decimals
             (y-decimals (unwrap! (contract-call? y-token get-decimals) (err "err-getting-y-decimals")))
             (scaled-up-balances (get-scaled-up-token-amounts initial-x-bal initial-y-bal x-decimals y-decimals))
@@ -874,8 +874,8 @@
             (initial-y-bal-scaled (get scaled-y scaled-up-balances))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of (var-get admins) contract-caller )) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of (var-get admins) tx-sender )) (err "err-not-admin"))
 
         ;; Assert using and that the pair does not already exist using is-none & map-get?
         (asserts! (is-none (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)})) (err "err-pair-xy-or-yx-exists"))
@@ -886,14 +886,14 @@
         ;; Assert that x & y tokens are the same
         (asserts! (is-eq initial-x-bal-scaled initial-y-bal-scaled) (err "err-initial-bal-odd"))
 
-        ;; Mint LP tokens to contract-caller
+        ;; Mint LP tokens to tx-sender
         (unwrap! (as-contract (contract-call? lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
 
         ;; Transfer token x liquidity to this contract
-        (unwrap! (stx-transfer? initial-x-bal contract-caller (as-contract contract-caller)) (err "err-transferring-token-x"))
+        (unwrap! (stx-transfer? initial-x-bal tx-sender (as-contract tx-sender)) (err "err-transferring-token-x"))
 
         ;; Transfer token y liquidity to this contract
-        (unwrap! (contract-call? y-token transfer initial-y-bal contract-caller (as-contract contract-caller) none) (err "err-transferring-token-y"))
+        (unwrap! (contract-call? y-token transfer initial-y-bal tx-sender (as-contract tx-sender) none) (err "err-transferring-token-y"))
 
         ;; Update all appropriate maps
         (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
@@ -919,8 +919,8 @@
             (current-pair (unwrap! (map-get? PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)}) (err "err-no-pair-data")))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of (var-get admins) contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of (var-get admins) tx-sender)) (err "err-not-admin"))
 
         ;; Update all appropriate maps
         (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
@@ -942,8 +942,8 @@
             ;;(new-admins (unwrap! (as-max-len? (append current-admins admin) u5) ("err-add-admin-overflow")))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Assert that admin is not already an admin using is-none & index-of with the admins var
         (asserts! (is-none (index-of current-admins admin)) (err "err-already-admin"))
@@ -958,11 +958,11 @@
   (let
     (
       (current-admin-list (var-get admins))
-      (caller-principal-position-in-list (index-of current-admin-list contract-caller))
+      (caller-principal-position-in-list (index-of current-admin-list tx-sender))
       (removeable-principal-position-in-list (index-of current-admin-list admin))
     )
 
-    ;; asserts contract-caller is an existing whitelist address
+    ;; asserts tx-sender is an existing whitelist address
     (asserts! (is-some caller-principal-position-in-list) (err "err-not-auth"))
 
     ;; asserts param principal (removeable whitelist) already exist
@@ -987,8 +987,8 @@
         (
             (current-admins (var-get admins))
         )
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         (ok (var-set buy-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
@@ -1000,8 +1000,8 @@
         (
             (current-admins (var-get admins))
         )
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         (ok (var-set sell-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
@@ -1013,8 +1013,8 @@
         (
             (current-admins (var-get admins))
         )
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         (ok (var-set admin-swap-fees {lps: new-lps-fee, stacking-dao: new-protocol-fee, bitflow: new-bitflow-fee}))
     )
@@ -1026,8 +1026,8 @@
         (
             (current-admins (var-get admins))
         )
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         (ok (var-set liquidity-fees new-liquidity-fee))
     )
@@ -1042,8 +1042,8 @@
             (current-admins (var-get admins))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Update all appropriate maps
         (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} (merge 
@@ -1061,8 +1061,8 @@
         (
             (current-admins (var-get admins))
         )
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         (ok (var-set convergence-threshold new-convergence-threshold))
     )
@@ -1077,8 +1077,8 @@
             (is-set (var-get staking-and-rewards-contract-is-set))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Assert that the staking-and-rewards contract has not already been set
         (asserts! (not is-set) (err "err-staking-and-rewards-contract-already-assigned"))
@@ -1100,8 +1100,8 @@
             (current-admins (var-get admins))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Set contract for handling staking and rewards
         (ok (var-set stacking-dao-contract stacking-dao-address))
@@ -1116,8 +1116,8 @@
             (current-admins (var-get admins))
         )
 
-        ;; Assert that contract-caller is an admin using is-some & index-of with the admins var
-        (asserts! (is-some (index-of current-admins contract-caller)) (err "err-not-admin"))
+        ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
+        (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
 
         ;; Set contract for handling staking and rewards
         (ok (var-set bitflow-contract bitflow-address))
