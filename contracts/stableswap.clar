@@ -21,7 +21,7 @@
 (define-constant this-contract (as-contract tx-sender))
 
 ;; Deployment height
-(define-constant deployment-height block-height)
+(define-constant deployment-height burn-block-height)
 
 ;; Cycle length in blocks (1 day = 144 blocks)
 (define-constant cycle-length u144)
@@ -109,7 +109,7 @@
 
 ;; Get current cycle
 (define-read-only (get-current-cycle) 
-    (/ (- block-height deployment-height) cycle-length)
+    (/ (- burn-block-height deployment-height) cycle-length)
 )
 
 ;; Get cycle from height
