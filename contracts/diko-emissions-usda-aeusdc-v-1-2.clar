@@ -5,6 +5,7 @@
 (define-constant ERR_CANNOT_REMOVE_CONTRACT_DEPLOYER (err "err-cannot-remove-contract-deployer"))
 (define-constant ERR_CONTRACT_STATUS (err "err-contract-status"))
 (define-constant ERR_TOKEN_TRANSFER_FAILED (err "err-token-transfer-failed"))
+(define-constant ERR_INVALID_CYCLE_REWARDS_EXPIRATION_LIMIT (err "err-invalid-cycle-rewards-expiration-limit"))
 (define-constant ERR_INVALID_AMOUNT (err "err-invalid-amount"))
 (define-constant ERR_INVALID_CYCLE (err "err-invalid-cycle"))
 (define-constant ERR_NO_CYCLE_DATA (err "err-no-cycle-data"))
@@ -17,13 +18,14 @@
 (define-constant ERR_CYCLE_NO_USER_REWARDS (err "err-cycle-no-user-rewards"))
 (define-constant ERR_CYCLE_REWARDS_TOO_HIGH (err "err-cycle-rewards-too-high"))
 
-(define-constant DEPLOYMENT_HEIGHT u835414)
+(define-constant DEPLOYMENT_HEIGHT u835413)
 (define-constant CYCLE_LENGTH u144)
 (define-constant CONTRACT_DEPLOYER tx-sender)
 
 (define-data-var admins (list 5 principal) (list tx-sender))
 (define-data-var helper-principal principal tx-sender)
 (define-data-var contract-status bool true)
+(define-data-var cycle-rewards-expiration-limit uint u30)
 (define-data-var total-unclaimed-cycle-rewards uint u0)
 
 (define-map cycles uint {total-rewards: uint, claimed-rewards: uint, unclaimed-rewards: uint})
@@ -39,6 +41,10 @@
 
 (define-read-only (get-contract-status)
   (ok (var-get contract-status))
+)
+
+(define-read-only (get-cycle-rewards-expiration-limit)
+  (ok (var-get cycle-rewards-expiration-limit))
 )
 
 (define-read-only (get-total-unclaimed-cycle-rewards)
@@ -116,6 +122,21 @@
   )
 )
 
+(define-public (set-cycle-rewards-expiration-limit (limit uint))
+  (let (
+    (current-admins (var-get admins))
+    (caller tx-sender)
+  )
+    (begin
+      (asserts! (is-some (index-of current-admins caller)) ERR_NOT_AUTHORIZED)
+      (asserts! (>= limit u30) ERR_INVALID_CYCLE_REWARDS_EXPIRATION_LIMIT)
+      (var-set cycle-rewards-expiration-limit limit)
+      (print {action: "set-cycle-rewards-expiration-limit", caller: caller, limit: limit})
+      (ok true)
+    )
+  )
+)
+
 (define-public (set-cycle-rewards (cycle uint) (amount uint))
   (let (
     (current-admins (var-get admins))
@@ -145,7 +166,8 @@
   )
     (begin
       (asserts! (is-some (index-of current-admins caller)) ERR_NOT_AUTHORIZED)
-      (asserts! (>= (- current-cycle cycle) u60) ERR_CYCLE_REWARDS_NOT_EXPIRED)
+      (asserts! (< cycle current-cycle) ERR_INVALID_CYCLE)
+      (asserts! (>= (- current-cycle cycle) (var-get cycle-rewards-expiration-limit)) ERR_CYCLE_REWARDS_NOT_EXPIRED)
       (map-set cycles cycle (merge cycle-data {unclaimed-rewards: u0}))
       (var-set total-unclaimed-cycle-rewards updated-total-unclaimed-cycle-rewards)
       (print {action: "clear-expired-cycle-rewards", caller: caller, cycle: cycle})
