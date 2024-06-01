@@ -128,7 +128,7 @@
     (share-fee-to <share-fee-to-trait>)
   )
   (let (
-    (swap-a (unwrap! (velar-a amount id token0 token1 token-in token-out share-fee-to) ERR_SWAP_A))
+    (swap-a (unwrap! (velar-a id token0 token1 token-in token-out share-fee-to amount) ERR_SWAP_A))
     (swap-b (unwrap! (bitflow-a swap-a) ERR_SWAP_B))
     (caller tx-sender)
   )
@@ -165,7 +165,7 @@
   )
   (let (
     (swap-a (unwrap! (bitflow-b amount) ERR_SWAP_A))
-    (swap-b (unwrap! (velar-a swap-a id token0 token1 token-in token-out share-fee-to) ERR_SWAP_B))
+    (swap-b (unwrap! (velar-a id token0 token1 token-in token-out share-fee-to swap-a) ERR_SWAP_B))
     (caller tx-sender)
   )
     (begin
@@ -192,35 +192,36 @@
   )
 )
 
-(define-private (bitflow-a (amount uint))
+(define-private (bitflow-a (x-amount uint))
   (let (
     (swap-a (try! (contract-call?
                   'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stableswap-stx-ststx-v-1-2 swap-x-for-y
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
                   'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2
-                  amount u0)))
+                  x-amount u0)))
   )
     (ok swap-a)
   )
 )
 
-(define-private (bitflow-b (amount uint))
+(define-private (bitflow-b (y-amount uint))
   (let (
     (swap-a (try! (contract-call?
                   'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stableswap-stx-ststx-v-1-2 swap-y-for-x
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
                   'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2
-                  amount u0)))
+                  y-amount u0)))
   )
     (ok swap-a)
   )
 )
 
 (define-private (velar-a
-    (amount uint) (id uint)
+    (id uint)
     (token0 <ft-trait>) (token1 <ft-trait>)
     (token-in <ft-trait>) (token-out <ft-trait>)
     (share-fee-to <share-fee-to-trait>)
+    (amt-in uint)
   )
   (let (
     (swap-a (try! (contract-call?
@@ -229,7 +230,7 @@
                   token0 token1
                   token-in token-out
                   share-fee-to
-                  amount u1)))
+                  amt-in u1)))
   )
     (ok (get amt-out swap-a))
   )
