@@ -1,4 +1,4 @@
-;; router-stx-ststx-bitflow-velar-v-1-1
+;; router-stx-ststx-bitflow-velar-v-1-2
 
 (use-trait ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait share-fee-to-trait 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-share-fee-to-trait.share-fee-to-trait)
@@ -34,7 +34,11 @@
   (ok (var-get swap-status))
 )
 
-(define-read-only (get-quote-a (amount uint) (id uint) (reversed bool))
+(define-read-only (get-quote-a
+    (amount uint)
+    (id uint) (reversed bool)
+    (swap-fee (tuple (num uint) (den uint)))
+  )
   (let (
     (velar-pool (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-core do-get-pool id))
     (r0 (if (is-eq reversed true)
@@ -43,7 +47,10 @@
     (r1 (if (is-eq reversed true)
             (get reserve0 velar-pool)
             (get reserve1 velar-pool)))
-    (quote-a (try! (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-library quote amount r0 r1)))
+    (quote-a (try! (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-library get-amount-out
+                   amount
+                   r0 r1
+                   swap-fee)))
     (quote-b (unwrap-panic (contract-call?
                            'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stableswap-stx-ststx-v-1-2 get-dy
                            'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
@@ -54,7 +61,11 @@
   )
 )
 
-(define-read-only (get-quote-b (amount uint) (id uint) (reversed bool))
+(define-read-only (get-quote-b
+    (amount uint)
+    (id uint) (reversed bool)
+    (swap-fee (tuple (num uint) (den uint)))
+  )
   (let (
     (velar-pool (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-core do-get-pool id))
     (r0 (if (is-eq reversed true)
@@ -68,7 +79,10 @@
                            'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
                            'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2
                            amount)))
-    (quote-b (try! (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-library quote quote-a r0 r1)))
+    (quote-b (try! (contract-call? 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-library get-amount-out
+                   quote-a
+                   r0 r1
+                   swap-fee)))
   )
     (ok quote-b)
   )
