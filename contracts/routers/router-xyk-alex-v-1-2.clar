@@ -38,20 +38,6 @@
   (ok (var-get swap-status))
 )
 
-(define-public (set-swap-status (status bool))
-  (let (
-    (admins-list (var-get admins))
-    (caller tx-sender)
-  )
-    (begin
-      (asserts! (is-some (index-of admins-list caller)) ERR_NOT_AUTHORIZED)
-      (var-set swap-status status)
-      (print {action: "set-swap-status", caller: caller, data: {status: status}})
-      (ok true)
-    )
-  )
-)
-
 (define-public (add-admin (admin principal))
   (let (
     (admins-list (var-get admins))
@@ -81,6 +67,20 @@
     (var-set admins (filter admin-not-removeable admins-list))
     (print {action: "remove-admin", caller: caller, data: {admin: admin}})
     (ok true)
+  )
+)
+
+(define-public (set-swap-status (status bool))
+  (let (
+    (admins-list (var-get admins))
+    (caller tx-sender)
+  )
+    (begin
+      (asserts! (is-some (index-of admins-list caller)) ERR_NOT_AUTHORIZED)
+      (var-set swap-status status)
+      (print {action: "set-swap-status", caller: caller, data: {status: status}})
+      (ok true)
+    )
   )
 )
 
