@@ -41,7 +41,7 @@
                   ststx-pool-1 ststx-pool-2 ststx-pool-3 ststx-pool-4
                   ststx-proxy-1 ststx-proxy-2 ststx-proxy-3 ststx-proxy-4)))
   )
-    (ok swap-a)
+    (ok (get amt-out (get swap4 swap-a)))
   )
 )
 
@@ -58,7 +58,7 @@
                   token-in token-out
                   share-fee-to)))
   )
-    (ok swap-a)
+    (ok (get amt-out swap-a))
   )
 )
 
@@ -75,7 +75,7 @@
                   token-in token-out
                   univ2v2-pool univ2v2-fees)))
   )
-    (ok swap-a)
+    (ok (get amt-out swap-a))
   )
 )
 
@@ -92,7 +92,7 @@
                   token-in token-out
                   curve-pool curve-fees)))
   )
-    (ok swap-a)
+    (ok (get amt-out swap-a))
   )
 )
 
@@ -110,6 +110,6 @@
                   token-in token-out
                   ststx-pool curve-fees ststx-proxy)))
   )
-    (ok swap-a)
+    (ok (get amt-out swap-a))
   )
 )
