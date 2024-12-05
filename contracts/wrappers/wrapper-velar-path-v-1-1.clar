@@ -63,12 +63,12 @@
 )
 
 (define-public (swap-univ2v2
-    (edge {a: (string-ascii 1), b: principal, c: uint, d: principal, e: principal, f: bool})
     (amt-in uint)
     (token-in <ft-trait>) (token-out <ft-trait>)
     (univ2v2-pool <univ2v2-pool-trait>) (univ2v2-fees <univ2v2-fees-trait>)
   )
   (let (
+    (edge {a: "v", b: univ2v2-pool, c: u0, d: token-in, e: token-out, f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-univ2v2
                   edge amt-in
@@ -80,12 +80,12 @@
 )
 
 (define-public (swap-curve
-    (edge {a: (string-ascii 1), b: principal, c: uint, d: principal, e: principal, f: bool})
     (amt-in uint)
     (token-in <ft-trait>) (token-out <ft-trait>)
     (curve-pool <curve-pool-trait>) (curve-fees <curve-fees-trait>)
   )
   (let (
+    (edge {a: "c", b: curve-pool, c: u0, d: token-in, e: token-out, f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-curve
                   edge amt-in
@@ -97,13 +97,13 @@
 )
 
 (define-public (swap-ststx
-    (edge {a: (string-ascii 1), b: principal, c: uint, d: principal, e: principal, f: bool})
     (amt-in uint)
     (token-in <ft-trait>) (token-out <ft-trait>)
     (ststx-pool <ststx-pool-trait>) (curve-fees <curve-fees-trait>)
     (ststx-proxy <ststx-proxy-trait>)
   )
   (let (
+    (edge {a: "s", b: ststx-pool, c: u0, d: token-in, e: token-out, f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-ststx
                   edge amt-in
