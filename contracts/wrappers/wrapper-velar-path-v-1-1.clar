@@ -48,23 +48,6 @@
   )
 )
 
-(define-public (swap-univ2
-    (edge {a: (string-ascii 1), b: principal, c: uint, d: principal, e: principal, f: bool})
-    (amt-in uint)
-    (token-in <ft-trait>) (token-out <ft-trait>)
-    (share-fee-to <share-fee-to-trait>)
-  )
-  (let (
-    (swap-a (try! (contract-call?
-                  'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-univ2
-                  edge amt-in
-                  token-in token-out
-                  share-fee-to)))
-  )
-    (ok (get amt-out swap-a))
-  )
-)
-
 (define-public (swap-univ2v2
     (amt-in uint)
     (token-in <ft-trait>) (token-out <ft-trait>)
@@ -94,6 +77,23 @@
                   edge amt-in
                   token-in token-out
                   curve-pool curve-fees)))
+  )
+    (ok (get amt-out swap-a))
+  )
+)
+
+(define-public (swap-usdh
+    (amt-in uint)
+    (token-in <ft-trait>) (token-out <ft-trait>)
+    (usdh-pool <curve-pool-trait>) (usdh-fees <curve-fees-trait>)
+  )
+  (let (
+    (edge {a: "h", b: (contract-of usdh-pool), c: u0, d: (contract-of token-in), e: (contract-of token-out), f: false})
+    (swap-a (try! (contract-call?
+                  'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-curve
+                  edge amt-in
+                  token-in token-out
+                  usdh-pool usdh-fees)))
   )
     (ok (get amt-out swap-a))
   )
