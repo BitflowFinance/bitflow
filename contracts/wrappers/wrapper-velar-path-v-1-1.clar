@@ -160,12 +160,12 @@
 (define-public (quote-usdh
     (amount uint)
     (token-in principal) (token-out principal)
-    (curve-pool <curve-pool-trait>)
+    (usdh-pool <curve-pool-trait>)
     (swap-fee {num: uint, den: uint})
     (usdh-in bool)
   )
   (let (
-    (pool-data (try! (contract-call? curve-pool get-pool)))
+    (pool-data (try! (contract-call? usdh-pool get-pool)))
     (swaps-reversed (and (is-eq token-in (get token1 pool-data)) (is-eq token-out (get token0 pool-data))))
     (reserves {in: (if swaps-reversed (get reserve1 pool-data) (get reserve0 pool-data)), out: (if swaps-reversed (get reserve0 pool-data) (get reserve1 pool-data))})
     (reserves-lifted {in: (if usdh-in (lift-amount (get in reserves)) (get in reserves)), out: (if usdh-in (get out reserves) (lift-amount (get out reserves)))})
