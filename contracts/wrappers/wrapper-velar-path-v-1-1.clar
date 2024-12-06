@@ -9,6 +9,9 @@
 (use-trait ststx-pool-trait 'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.curve-pool-trait_ststx.curve-pool-trait)
 (use-trait ststx-proxy-trait 'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.curve-proxy-trait_ststx.curve-proxy-trait)
 
+(define-constant NUM_A u1000000)
+(define-constant NUM_B u100)
+
 (define-public (apply
     (path (list 4 {a: (string-ascii 1), b: principal, c: uint, d: principal, e: principal, f: bool}))
     (amt-in uint)
@@ -112,4 +115,106 @@
   )
     (ok (get amt-out swap-a))
   )
+)
+
+(define-public (quote-univ2v2
+    (amount uint)
+    (token-in principal) (token-out principal)
+    (univ2v2-pool <univ2v2-pool-trait>)
+    (swap-fee {num: uint, den: uint})
+  )
+  (let (
+    (pool-data (try! (contract-call? univ2v2-pool get-pool)))
+    (swaps-reversed (and (is-eq token-in (get token1 pool-data)) (is-eq token-out (get token0 pool-data))))
+    (reserves {in: (if swaps-reversed (get reserve1 pool-data) (get reserve0 pool-data)), out: (if swaps-reversed (get reserve0 pool-data) (get reserve1 pool-data))})
+    (amount-adjusted (/ (* amount (get num swap-fee)) (get den swap-fee)))
+    (quote-a (try! (contract-call?
+                   'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-math find-dx
+                   (get out reserves) (get in reserves)
+                   amount-adjusted)))
+  )
+    (ok quote-a)
+  )
+)
+
+(define-public (quote-curve
+    (amount uint)
+    (token-in principal) (token-out principal)
+    (curve-pool <curve-pool-trait>)
+    (swap-fee {num: uint, den: uint})
+  )
+  (let (
+    (pool-data (try! (contract-call? curve-pool get-pool)))
+    (swaps-reversed (and (is-eq token-in (get token1 pool-data)) (is-eq token-out (get token0 pool-data))))
+    (reserves {in: (if swaps-reversed (get reserve1 pool-data) (get reserve0 pool-data)), out: (if swaps-reversed (get reserve0 pool-data) (get reserve1 pool-data))})
+    (amount-adjusted (/ (* amount (get num swap-fee)) (get den swap-fee)))
+    (quote-a (try! (contract-call?
+                   'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.curve-math_v1_0_0 find-dx
+                   (get out reserves) (get in reserves)
+                   amount-adjusted u0 (get A pool-data))))
+  )
+    (ok quote-a)
+  )
+)
+
+(define-public (quote-usdh
+    (amount uint)
+    (token-in principal) (token-out principal)
+    (curve-pool <curve-pool-trait>)
+    (swap-fee {num: uint, den: uint})
+    (usdh-in bool)
+  )
+  (let (
+    (pool-data (try! (contract-call? curve-pool get-pool)))
+    (swaps-reversed (and (is-eq token-in (get token1 pool-data)) (is-eq token-out (get token0 pool-data))))
+    (reserves {in: (if swaps-reversed (get reserve1 pool-data) (get reserve0 pool-data)), out: (if swaps-reversed (get reserve0 pool-data) (get reserve1 pool-data))})
+    (reserves-lifted {in: (if usdh-in (lift-amount (get in reserves)) (get in reserves)), out: (if usdh-in (get out reserves) (lift-amount (get out reserves)))})
+    (amount-adjusted (/ (* amount (get num swap-fee)) (get den swap-fee)))
+    (amount-lifted (if usdh-in (lift-amount amount-adjusted) amount-adjusted))
+    (quote-a (try! (contract-call? 
+                   'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.curve-math_v1_0_0 find-dx
+                   (get out reserves-lifted) (get in reserves-lifted)
+                   amount-lifted u0 (get A pool-data))))
+  )
+    (ok (if usdh-in quote-a (lower-amount quote-a)))
+  )
+)
+
+(define-public (quote-ststx
+    (amount uint)
+    (token-in principal) (token-out principal)
+    (ststx-pool <ststx-pool-trait>) (ststx-proxy <ststx-proxy-trait>)
+    (swap-fee {num: uint, den: uint})
+    (stx-in bool)
+  )
+  (let (
+    (pool-data (try! (contract-call? ststx-pool get-pool)))
+    (pool-ratio (try! (contract-call? ststx-proxy get-ratio)))
+    (swaps-reversed (and (is-eq token-in (get token1 pool-data)) (is-eq token-out (get token0 pool-data))))
+    (reserves {in: (if swaps-reversed (get reserve1 pool-data) (get reserve0 pool-data)), out: (if swaps-reversed (get reserve0 pool-data) (get reserve1 pool-data))})
+    (amount-adjusted (/ (* amount (get num swap-fee)) (get den swap-fee)))
+    (amount-adjusted-ratio (if stx-in (divide-ratio amount-adjusted pool-ratio) (multiply-ratio amount-adjusted pool-ratio)))
+    (quote-a (try! (contract-call?
+                   'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.curve-math_v1_0_0 find-dx
+                   (get out reserves) (get in reserves)
+                   amount-adjusted-ratio u0 (get A pool-data))))
+  )
+    (ok quote-a)
+  )
+)
+
+(define-private (multiply-ratio (amount uint) (ratio uint))
+  (/ (* amount ratio) NUM_A)
+)
+
+(define-private (divide-ratio (amount uint) (ratio uint))
+ (/ (* amount NUM_A) ratio)
+)
+
+(define-private (lift-amount (amount uint))
+  (/ amount NUM_B)
+)
+
+(define-private (lower-amount (amount uint))
+  (* amount NUM_B)
 )
