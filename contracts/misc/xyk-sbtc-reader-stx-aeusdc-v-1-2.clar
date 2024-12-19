@@ -1,4 +1,4 @@
-;; xyk-sbtc-reader-stx-aeusdc-v-1-2.clar
+;; xyk-sbtc-reader-stx-aeusdc-v-1-2
 
 ;; Error constants
 (define-constant ERR_INVALID_PRINCIPAL (err u7001))
