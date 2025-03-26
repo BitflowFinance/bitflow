@@ -13,7 +13,7 @@
 (define-constant ERR_CANNOT_REMOVE_CONTRACT_DEPLOYER (err u1007))
 (define-constant ERR_INVALID_FEE (err u1008))
 (define-constant ERR_AGGREGATOR_DISABLED (err u1009))
-(define-constant ERR_CONTRACT_DISABLED (err u1001))
+(define-constant ERR_CONTRACT_DISABLED (err u1010))
 (define-constant ERR_NO_CONTRACT_DATA (err u1011))
 (define-constant ERR_NO_PROVIDER_DATA (err u1012))
 
