@@ -143,7 +143,7 @@
 (define-public (swap-helper-a
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (xyk-tokens (tuple (a <xyk-ft-trait>) (b <xyk-ft-trait>)))
+    (xyk-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (xyk-pools (tuple (a <xyk-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (alex-factors (tuple (a uint)))
@@ -207,7 +207,7 @@
 (define-public (swap-helper-b
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (xyk-tokens (tuple (a <xyk-ft-trait>) (b <xyk-ft-trait>)))
+    (xyk-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (xyk-pools (tuple (a <xyk-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint)))
@@ -271,7 +271,7 @@
 (define-public (swap-helper-c
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (xyk-tokens (tuple (a <xyk-ft-trait>) (b <xyk-ft-trait>)))
+    (xyk-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (xyk-pools (tuple (a <xyk-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint)))
@@ -335,7 +335,7 @@
 (define-public (swap-helper-d
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (xyk-tokens (tuple (a <xyk-ft-trait>) (b <xyk-ft-trait>)))
+    (xyk-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (xyk-pools (tuple (a <xyk-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>) (e <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint) (d uint)))
