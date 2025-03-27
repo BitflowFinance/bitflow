@@ -116,7 +116,7 @@
 (define-public (swap-helper-a
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (alex-factors (tuple (a uint)))
@@ -171,7 +171,7 @@
 (define-public (swap-helper-b
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint)))
@@ -226,7 +226,7 @@
 (define-public (swap-helper-c
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint)))
@@ -236,7 +236,7 @@
     (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amount)))
     (amount-check (asserts! (> amount-after-aggregator-fees u0) ERR_INVALID_AMOUNT))
     (swap-a (if (is-eq swaps-reversed false)
-                (unwrap! (stableswap-sa amount amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
+                (unwrap! (stableswap-sa amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
                 (unwrap! (alex-sc amount-after-aggregator-fees alex-tokens alex-factors) ERR_SWAP_A)))
     (scaled-amount-a (if (is-eq swaps-reversed false)
                          (unwrap! (scale-up-stableswap-amount swap-a (get b stableswap-tokens) (get a alex-tokens)) ERR_SCALED_AMOUNT_A)
@@ -281,7 +281,7 @@
 (define-public (swap-helper-d
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>) (e <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint) (d uint)))
