@@ -384,7 +384,7 @@
 (define-public (swap-helper-a
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (a-factors (tuple (a uint)))
@@ -435,7 +435,7 @@
 (define-public (swap-helper-b
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint)))
@@ -486,7 +486,7 @@
 (define-public (swap-helper-c
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint)))
@@ -537,7 +537,7 @@
 (define-public (swap-helper-d
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint) (d uint)))
@@ -588,7 +588,7 @@
 (define-public (swap-helper-e
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (a-factors (tuple (a uint)))
@@ -639,7 +639,7 @@
 (define-public (swap-helper-f
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint)))
@@ -690,7 +690,7 @@
 (define-public (swap-helper-g
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint)))
@@ -741,7 +741,7 @@
 (define-public (swap-helper-h
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint) (d uint)))
@@ -792,7 +792,7 @@
 (define-public (swap-helper-i
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (a-factors (tuple (a uint)))
@@ -843,7 +843,7 @@
 (define-public (swap-helper-j
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint)))
@@ -894,7 +894,7 @@
 (define-public (swap-helper-k
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint)))
@@ -945,7 +945,7 @@
 (define-public (swap-helper-l
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint) (d uint)))
@@ -996,7 +996,7 @@
 (define-public (swap-helper-m
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>) (e <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>)))
     (a-factors (tuple (a uint)))
@@ -1047,7 +1047,7 @@
 (define-public (swap-helper-n
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>) (e <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint)))
@@ -1098,7 +1098,7 @@
 (define-public (swap-helper-o
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>) (e <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint)))
@@ -1149,7 +1149,7 @@
 (define-public (swap-helper-p
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (v-tokens (tuple (a <v-ft-trait>) (b <v-ft-trait>) (c <v-ft-trait>) (d <v-ft-trait>) (e <v-ft-trait>)))
+    (v-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (v-share-fee-to <v-share-fee-to-trait>)
     (a-tokens (tuple (a <a-ft-trait>) (b <a-ft-trait>) (c <a-ft-trait>) (d <a-ft-trait>) (e <a-ft-trait>)))
     (a-factors (tuple (a uint) (b uint) (c uint) (d uint)))
