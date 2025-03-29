@@ -15,14 +15,15 @@
     ;; Claim any staking rewards
     (claim-rewards (claim-any-rewards))
 
-    ;; Reclaim any staked idle LP tokens
+    ;; Reclaim any staked idle LP tokens and calculate updated LP amount
     (reclaim-idle-lp (reclaim-any-idle-lp))
+    (updated-lp-amount (+ lp-amount reclaim-idle-lp))
     
     ;; Withdraw liquidity from v-1-2 pool
     (withdraw-liquidity (unwrap! (contract-call? 'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stableswap-stx-ststx-v-1-2 withdraw-liquidity
                                  'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
                                  'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2
-                                 lp-amount min-stx min-ststx) ERR_WITHDRAWING_LIQUIDITY))
+                                 updated-lp-amount min-stx min-ststx) ERR_WITHDRAWING_LIQUIDITY))
     (stx-withdrawn (get withdrawal-x-balance withdraw-liquidity))
     (ststx-withdrawn (get withdrawal-y-balance withdraw-liquidity))
 
@@ -47,6 +48,7 @@
         caller: caller,
         data: {
           lp-amount: lp-amount,
+          updated-lp-amount: updated-lp-amount,
           min-stx: min-stx,
           min-ststx: min-ststx,
           min-new-lp: min-new-lp,
@@ -70,8 +72,8 @@
     (match (contract-call? 'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.earn-stx-ststx-v-1-2 claim-all-staking-rewards
            'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
            'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2)
-      reward-amount (ok (get x-token-reward reward-amount))
-      error (ok u0)
+      reward-amount (get x-token-reward reward-amount)
+      error u0
     )
   )
 )
@@ -82,8 +84,8 @@
     (match (contract-call? 'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.earn-stx-ststx-v-1-2 unstake-all-lp-tokens
            'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
            'SPQC38PW542EQJ5M11CR25P7BS1CA6QT4TBXGB3M.stx-ststx-lp-token-v-1-2)
-      reclaimed-amount (ok reclaimed-amount)
-      error (ok u0)
+      reclaimed-amount reclaimed-amount
+      error u0
     )
   )
 )
