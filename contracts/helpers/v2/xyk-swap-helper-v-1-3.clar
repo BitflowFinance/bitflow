@@ -1,7 +1,6 @@
 ;; xyk-swap-helper-v-1-3
 
 ;; Use XYK ft trait and XYK pool trait
-(use-trait ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait xyk-ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
 (use-trait xyk-pool-trait .xyk-pool-trait-v-1-2.xyk-pool-trait)
 
@@ -448,7 +447,7 @@
 )
 
 ;; Transfer aggregator fees
-(define-private (transfer-aggregator-fees (token <ft-trait>) (provider (optional principal)) (amount uint))
+(define-private (transfer-aggregator-fees (token <xyk-ft-trait>) (provider (optional principal)) (amount uint))
   (let (
     (call-a (try! (contract-call?
                   'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.aggregator-core-v-1-1 transfer-aggregator-fees
