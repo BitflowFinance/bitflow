@@ -9,6 +9,8 @@
 (use-trait ststx-pool-trait 'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.curve-pool-trait_ststx.curve-pool-trait)
 (use-trait ststx-proxy-trait 'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.curve-proxy-trait_ststx.curve-proxy-trait)
 
+(define-constant ERR_NO_AGGREGATOR_FEE_TOKEN (err u1013))
+
 (define-constant NUM_A u1000000)
 (define-constant NUM_B u100)
 
@@ -33,7 +35,8 @@
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token1 provider amount)))
+    (aggregator-fee-token (unwrap! token1 ERR_NO_AGGREGATOR_FEE_TOKEN))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amt-in)))
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging apply
                   path amount-after-aggregator-fees
@@ -99,7 +102,7 @@
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amt-in)))
     (edge {a: "v", b: (contract-of univ2v2-pool), c: u0, d: (contract-of token-in), e: (contract-of token-out), f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-univ2v2
@@ -134,7 +137,7 @@
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amt-in)))
     (edge {a: "c", b: (contract-of curve-pool), c: u0, d: (contract-of token-in), e: (contract-of token-out), f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-curve
@@ -169,7 +172,7 @@
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amt-in)))
     (edge {a: "h", b: (contract-of usdh-pool), c: u0, d: (contract-of token-in), e: (contract-of token-out), f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-curve
@@ -205,7 +208,7 @@
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees token-in provider amt-in)))
     (edge {a: "s", b: (contract-of ststx-pool), c: u0, d: (contract-of token-in), e: (contract-of token-out), f: false})
     (swap-a (try! (contract-call?
                   'SP20X3DC5R091J8B6YPQT638J8NR1W83KN6TN5BJY.path-apply_staging swap-ststx
