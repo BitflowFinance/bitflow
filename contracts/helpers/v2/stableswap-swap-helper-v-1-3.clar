@@ -447,7 +447,7 @@
 )
 
 ;; Transfer aggregator fees
-(define-private (transfer-aggregator-fees (token <ft-trait>) (provider (optional principal)) (amount uint))
+(define-private (transfer-aggregator-fees (token <stableswap-ft-trait>) (provider (optional principal)) (amount uint))
   (let (
     (call-a (try! (contract-call?
                   'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.aggregator-core-v-1-1 transfer-aggregator-fees
