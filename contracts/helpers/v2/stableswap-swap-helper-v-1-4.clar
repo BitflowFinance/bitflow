@@ -2,7 +2,7 @@
 
 ;; Use Stableswap ft trait and Stableswap pool trait
 (use-trait stableswap-ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
-(use-trait stableswap-pool-trait .stableswap-pool-trait-v-1-3.stableswap-pool-trait)
+(use-trait stableswap-pool-trait .stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 
 ;; Error constants
 (define-constant ERR_INVALID_AMOUNT (err u6002))
@@ -393,12 +393,12 @@
     ;; Get quote based on path
     (quote-a (if (is-eq is-reversed false)
                  (try! (contract-call?
-                 .stableswap-core-v-1-3 get-dy
+                 .stableswap-core-v-1-4 get-dy
                  pool
                  token-in token-out
                  amount))
                  (try! (contract-call?
-                 .stableswap-core-v-1-3 get-dx
+                 .stableswap-core-v-1-4 get-dx
                  pool
                  token-out token-in
                  amount))))
@@ -420,12 +420,12 @@
     ;; Perform swap based on path
     (swap-a (if (is-eq is-reversed false)
                 (try! (contract-call?
-                      .stableswap-core-v-1-3 swap-x-for-y
+                      .stableswap-core-v-1-4 swap-x-for-y
                       pool
                       token-in token-out
                       amount u1))
                 (try! (contract-call?
-                      .stableswap-core-v-1-3 swap-y-for-x
+                      .stableswap-core-v-1-4 swap-y-for-x
                       pool
                       token-out token-in
                       amount u1))))
