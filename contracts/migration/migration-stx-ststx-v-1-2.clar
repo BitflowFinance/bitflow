@@ -1,15 +1,15 @@
-;; migration-stx-ststx-v-1-1
-;; Contract to facilitate migration from stableswap-stx-ststx-v-1-2 to stableswap-core-v-1-3
+;; migration-stx-ststx-v-1-2
+;; Contract to facilitate migration from stableswap-stx-ststx-v-1-2 to stableswap-core-v-1-4
 
 ;; Use all required traits
 (use-trait ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
-(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-3.stableswap-pool-trait)
+(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 
 ;; Error constants
 (define-constant ERR_WITHDRAWING_LIQUIDITY (err u6001))
 (define-constant ERR_ADDING_LIQUIDITY (err u6002))
 
-;; Migrate from v-1-2 pool to v-1-3 pool
+;; Migrate from v-1-2 pool to v-1-4 pool
 (define-public (migrate (lp-amount uint) (min-stx uint) (min-ststx uint) (min-new-lp uint) (cycles uint))
   (let (
     ;; Claim any staking rewards
@@ -27,16 +27,16 @@
     (stx-withdrawn (get withdrawal-x-balance withdraw-liquidity))
     (ststx-withdrawn (get withdrawal-y-balance withdraw-liquidity))
 
-    ;; Add liquidity to v-1-3 pool
-    (add-liquidity (unwrap! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 add-liquidity
-                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-stx-ststx-v-1-3
+    ;; Add liquidity to v-1-4 pool
+    (add-liquidity (unwrap! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 add-liquidity
+                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-stx-ststx-v-1-4
                             'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2
                             'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
                             stx-withdrawn ststx-withdrawn min-new-lp) ERR_ADDING_LIQUIDITY))
     
     ;; Stake new LP tokens if cycles is greater than 0
     (stake-new-lp (if (> cycles u0)
-      (try! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-staking-stx-ststx-v-1-3 stake-lp-tokens
+      (try! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-staking-stx-ststx-v-1-4 stake-lp-tokens
             add-liquidity cycles))
       {amount: u0, cycles: u0}))
 
