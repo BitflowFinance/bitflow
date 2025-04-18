@@ -1,7 +1,7 @@
-;; router-stableswap-alex-v-1-3
+;; router-stableswap-alex-v-1-6
 
 (use-trait stableswap-ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
-(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-3.stableswap-pool-trait)
+(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 (use-trait alex-ft-trait 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.trait-sip-010.sip-010-trait)
 
 (define-constant ERR_NOT_AUTHORIZED (err u6001))
@@ -456,12 +456,12 @@
     (is-reversed (is-stableswap-path-reversed (get a tokens) (get b tokens) (get a pools)))
     (quote-a (if (is-eq is-reversed false)
                  (try! (contract-call?
-                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 get-dy
+                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dy
                  (get a pools)
                  (get a tokens) (get b tokens)
                  amount))
                  (try! (contract-call?
-                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 get-dx
+                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dx
                  (get a pools)
                  (get b tokens) (get a tokens)
                  amount))))
@@ -559,12 +559,12 @@
     (is-reversed (is-stableswap-path-reversed (get a tokens) (get b tokens) (get a pools)))
     (swap-a (if (is-eq is-reversed false)
                 (try! (contract-call?
-                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 swap-x-for-y
+                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-x-for-y
                       (get a pools)
                       (get a tokens) (get b tokens)
                       amount u1))
                 (try! (contract-call?
-                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 swap-y-for-x
+                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-y-for-x
                       (get a pools)
                       (get b tokens) (get a tokens)
                       amount u1))))
