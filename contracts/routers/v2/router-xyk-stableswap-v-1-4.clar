@@ -1,11 +1,11 @@
-;; router-xyk-stableswap-v-1-3
+;; router-xyk-stableswap-v-1-4
 
 ;; Use all required traits
 (use-trait ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait xyk-ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait xyk-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.xyk-pool-trait-v-1-2.xyk-pool-trait)
 (use-trait stableswap-ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
-(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-3.stableswap-pool-trait)
+(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 
 ;; Error constants
 (define-constant ERR_INVALID_AMOUNT (err u6002))
@@ -175,12 +175,12 @@
     ;; Get quote based on path direction
     (quote-result (if (is-eq is-reversed false)
                       (try! (contract-call?
-                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 get-dy
+                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dy
                             (get a pools)
                             (get a tokens) (get b tokens)
                             amount))
                       (try! (contract-call?
-                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 get-dx
+                            'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dx
                             (get a pools)
                             (get b tokens) (get a tokens)
                             amount))))
@@ -229,12 +229,12 @@
     ;; Perform swap based on path direction
     (swap-result (if (is-eq is-reversed false)
                      (try! (contract-call?
-                           'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 swap-x-for-y
+                           'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-x-for-y
                            (get a pools)
                            (get a tokens) (get b tokens)
                            amount u1))
                      (try! (contract-call?
-                           'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-3 swap-y-for-x
+                           'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-y-for-x
                            (get a pools)
                            (get b tokens) (get a tokens)
                            amount u1))))
