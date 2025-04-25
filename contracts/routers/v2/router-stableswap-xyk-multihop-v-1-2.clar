@@ -1,6 +1,6 @@
 ;; router-stableswap-xyk-multihop-v-1-2
 
-(use-trait ft-trait .sip-010-trait-ft-standard.sip-010-trait)
+(use-trait ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
 (use-trait stableswap-pool-trait .stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 (use-trait xyk-pool-trait .xyk-pool-trait-v-1-2.xyk-pool-trait)
 
