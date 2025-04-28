@@ -54,7 +54,7 @@
           min-new-lp: min-new-lp,
           cycles: cycles,
           rewards-claimed: claim-rewards,
-          idle-lp-reclaiemd: reclaim-idle-lp,
+          idle-lp-reclaimed: reclaim-idle-lp,
           stx-withdrawn: stx-withdrawn,
           ststx-withdrawn: ststx-withdrawn,
           new-lp-amount: add-liquidity,
