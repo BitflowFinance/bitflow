@@ -8,8 +8,8 @@
     (token-a-memo (optional (buff 34)))
     (token-b <sip-010-trait>)
     (token-b-amount uint)
-    (token-b-memo (optional (buff 34)
-    (recipient principal))))
+    (token-b-memo (optional (buff 34)))
+    (recipient principal))
     (let (
         (transfer-a (contract-call? token-a transfer token-a-amount tx-sender recipient token-a-memo))
         (transfer-b (contract-call? token-b transfer token-b-amount tx-sender recipient token-b-memo))
