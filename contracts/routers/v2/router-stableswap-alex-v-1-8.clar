@@ -1,8 +1,8 @@
-;; router-stableswap-alex-v-1-3
+;; router-stableswap-alex-v-1-8
 
 (use-trait ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait stableswap-ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
-(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-2.stableswap-pool-trait)
+(use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 (use-trait alex-ft-trait 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.trait-sip-010.sip-010-trait)
 
 (define-constant ERR_INVALID_AMOUNT (err u6002))
@@ -116,14 +116,15 @@
 (define-public (swap-helper-a
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
     (alex-factors (tuple (a uint)))
   )
   (let (
-    (aggregator-fee-token (if (is-eq swaps-reversed false) (get a stableswap-tokens) (get a alex-tokens)))
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amount)))
+    (amount-after-aggregator-fees (if (is-eq swaps-reversed false)
+                                      (try! (transfer-aggregator-fees (get a stableswap-tokens) provider amount))
+                                      (try! (transfer-aggregator-fees (get a alex-tokens) provider amount))))
     (amount-check (asserts! (> amount-after-aggregator-fees u0) ERR_INVALID_AMOUNT))
     (swap-a (if (is-eq swaps-reversed false)
                 (unwrap! (stableswap-sa amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
@@ -171,14 +172,15 @@
 (define-public (swap-helper-b
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint)))
   )
   (let (
-    (aggregator-fee-token (if (is-eq swaps-reversed false) (get a stableswap-tokens) (get a alex-tokens)))
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amount)))
+    (amount-after-aggregator-fees (if (is-eq swaps-reversed false)
+                                      (try! (transfer-aggregator-fees (get a stableswap-tokens) provider amount))
+                                      (try! (transfer-aggregator-fees (get a alex-tokens) provider amount))))
     (amount-check (asserts! (> amount-after-aggregator-fees u0) ERR_INVALID_AMOUNT))
     (swap-a (if (is-eq swaps-reversed false)
                 (unwrap! (stableswap-sa amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
@@ -226,14 +228,15 @@
 (define-public (swap-helper-c
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint)))
   )
   (let (
-    (aggregator-fee-token (if (is-eq swaps-reversed false) (get a stableswap-tokens) (get a alex-tokens)))
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amount)))
+    (amount-after-aggregator-fees (if (is-eq swaps-reversed false)
+                                      (try! (transfer-aggregator-fees (get a stableswap-tokens) provider amount))
+                                      (try! (transfer-aggregator-fees (get a alex-tokens) provider amount))))
     (amount-check (asserts! (> amount-after-aggregator-fees u0) ERR_INVALID_AMOUNT))
     (swap-a (if (is-eq swaps-reversed false)
                 (unwrap! (stableswap-sa amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
@@ -281,14 +284,15 @@
 (define-public (swap-helper-d
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
-    (stableswap-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>)))
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
     (stableswap-pools (tuple (a <stableswap-pool-trait>)))
     (alex-tokens (tuple (a <alex-ft-trait>) (b <alex-ft-trait>) (c <alex-ft-trait>) (d <alex-ft-trait>) (e <alex-ft-trait>)))
     (alex-factors (tuple (a uint) (b uint) (c uint) (d uint)))
   )
   (let (
-    (aggregator-fee-token (if (is-eq swaps-reversed false) (get a stableswap-tokens) (get a alex-tokens)))
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees aggregator-fee-token provider amount)))
+    (amount-after-aggregator-fees (if (is-eq swaps-reversed false)
+                                      (try! (transfer-aggregator-fees (get a stableswap-tokens) provider amount))
+                                      (try! (transfer-aggregator-fees (get a alex-tokens) provider amount))))
     (amount-check (asserts! (> amount-after-aggregator-fees u0) ERR_INVALID_AMOUNT))
     (swap-a (if (is-eq swaps-reversed false)
                 (unwrap! (stableswap-sa amount-after-aggregator-fees stableswap-tokens stableswap-pools) ERR_SWAP_A)
@@ -397,12 +401,12 @@
     (is-reversed (is-stableswap-path-reversed (get a tokens) (get b tokens) (get a pools)))
     (quote-a (if (is-eq is-reversed false)
                  (try! (contract-call?
-                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-2 get-dy
+                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dy
                  (get a pools)
                  (get a tokens) (get b tokens)
                  amount))
                  (try! (contract-call?
-                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-2 get-dx
+                 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 get-dx
                  (get a pools)
                  (get b tokens) (get a tokens)
                  amount))))
@@ -500,12 +504,12 @@
     (is-reversed (is-stableswap-path-reversed (get a tokens) (get b tokens) (get a pools)))
     (swap-a (if (is-eq is-reversed false)
                 (try! (contract-call?
-                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-2 swap-x-for-y
+                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-x-for-y
                       (get a pools)
                       (get a tokens) (get b tokens)
                       amount u1))
                 (try! (contract-call?
-                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-2 swap-y-for-x
+                      'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-core-v-1-4 swap-y-for-x
                       (get a pools)
                       (get b tokens) (get a tokens)
                       amount u1))))
