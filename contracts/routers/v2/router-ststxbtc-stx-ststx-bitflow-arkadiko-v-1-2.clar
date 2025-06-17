@@ -11,11 +11,11 @@
   (let (
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
-      (try! (contract-call? .router-ststxbtc-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-a
+      (try! (contract-call? .router-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-a
             amount min-received provider token-x-trait token-y-trait))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
-      (try! (contract-call? .router-ststxbtc-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-a
+      (try! (contract-call? .router-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-a
             swap-a min-received provider token-x-trait token-y-trait))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
@@ -32,11 +32,11 @@
   (let (
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
-      (try! (contract-call? .router-ststxbtc-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-b
+      (try! (contract-call? .router-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-b
             amount min-received provider token-x-trait token-y-trait))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
-      (try! (contract-call? .router-ststxbtc-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-b
+      (try! (contract-call? .router-stx-ststx-bitflow-arkadiko-v-1-2 swap-helper-b
             swap-a min-received provider token-x-trait token-y-trait))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
