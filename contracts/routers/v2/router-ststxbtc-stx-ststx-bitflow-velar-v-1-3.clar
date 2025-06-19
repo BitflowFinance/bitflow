@@ -16,11 +16,11 @@
     (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .router-stx-ststx-bitflow-velar-v-1-3 get-quote-a
-            amount provider token-x token-y))
+            amount provider id reversed swap-fee))
     ))
     (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .router-stx-ststx-bitflow-velar-v-1-3 get-quote-a
-            quote-a provider token-x token-y))
+            quote-a provider id reversed swap-fee))
       (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
@@ -38,11 +38,11 @@
     (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .router-stx-ststx-bitflow-velar-v-1-3 get-quote-b
-            amount provider token-x token-y))
+            amount provider id reversed swap-fee))
     ))
     (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .router-stx-ststx-bitflow-velar-v-1-3 get-quote-b
-            quote-a provider token-x token-y))
+            quote-a provider id reversed swap-fee))
       (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
