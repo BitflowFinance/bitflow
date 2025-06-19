@@ -6,6 +6,104 @@
 (use-trait velar-share-fee-to-trait 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-share-fee-to-trait.share-fee-to-trait)
 (use-trait ststx-ststxbtc-reserve-trait 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-trait-v1.reserve-trait)
 
+(define-constant BPS u1000000)
+
+(define-public (get-quote-a
+    (amount uint) (provider (optional principal))
+    (swaps-reversed bool)
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-pools (tuple (a <stableswap-pool-trait>)))
+    (velar-tokens (tuple (a <velar-ft-trait>) (b <velar-ft-trait>)))
+    (ststx-ststxbtc-path-reversed bool) (ststx-ststxbtc-calls-reversed bool) (ststx-ststxbtc-reserve <ststx-ststxbtc-reserve-trait>)
+  )
+  (let (
+    (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-a
+            amount provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+    ))
+    (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-a
+            quote-a provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+      (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+    ))
+  )
+    (ok quote-b)
+  )
+)
+
+(define-public (get-quote-b
+    (amount uint) (provider (optional principal))
+    (swaps-reversed bool)
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-pools (tuple (a <stableswap-pool-trait>)))
+    (velar-tokens (tuple (a <velar-ft-trait>) (b <velar-ft-trait>) (c <velar-ft-trait>)))
+    (ststx-ststxbtc-path-reversed bool) (ststx-ststxbtc-calls-reversed bool) (ststx-ststxbtc-reserve <ststx-ststxbtc-reserve-trait>)
+  )
+  (let (
+    (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-b
+            amount provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+    ))
+    (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-b
+            quote-a provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+      (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+    ))
+  )
+    (ok quote-b)
+  )
+)
+
+(define-public (get-quote-c
+    (amount uint) (provider (optional principal))
+    (swaps-reversed bool)
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-pools (tuple (a <stableswap-pool-trait>)))
+    (velar-tokens (tuple (a <velar-ft-trait>) (b <velar-ft-trait>) (c <velar-ft-trait>) (d <velar-ft-trait>)))
+    (ststx-ststxbtc-path-reversed bool) (ststx-ststxbtc-calls-reversed bool) (ststx-ststxbtc-reserve <ststx-ststxbtc-reserve-trait>)
+  )
+  (let (
+    (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-c
+            amount provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+    ))
+    (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-c
+            quote-a provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+      (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+    ))
+  )
+    (ok quote-b)
+  )
+)
+
+(define-public (get-quote-d
+    (amount uint) (provider (optional principal))
+    (swaps-reversed bool)
+    (stableswap-tokens (tuple (a <stableswap-ft-trait>) (b <stableswap-ft-trait>)))
+    (stableswap-pools (tuple (a <stableswap-pool-trait>)))
+    (velar-tokens (tuple (a <velar-ft-trait>) (b <velar-ft-trait>) (c <velar-ft-trait>) (d <velar-ft-trait>) (e <velar-ft-trait>)))
+    (ststx-ststxbtc-path-reversed bool) (ststx-ststxbtc-calls-reversed bool) (ststx-ststxbtc-reserve <ststx-ststxbtc-reserve-trait>)
+  )
+  (let (
+    (quote-a (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (quote-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-d
+            amount provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+    ))
+    (quote-b (if (is-eq ststx-ststxbtc-calls-reversed false)
+      (try! (contract-call? .router-stableswap-velar-v-1-5 get-quote-d
+            quote-a provider swaps-reversed stableswap-tokens stableswap-pools velar-tokens))
+      (try! (quote-ststx-ststxbtc quote-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
+    ))
+  )
+    (ok quote-b)
+  )
+)
+
 (define-public (swap-helper-a
     (amount uint) (min-received uint) (provider (optional principal))
     (swaps-reversed bool)
@@ -103,6 +201,18 @@
     ))
   )
     (ok swap-b)
+  )
+)
+
+(define-private (quote-ststx-ststxbtc (amount uint) (reserve <ststx-ststxbtc-reserve-trait>) (reversed bool))
+  (let (
+    (stx-ststx (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.data-core-v2 get-stx-per-ststx
+                     reserve)))
+    (quote-a (if (is-eq reversed false)
+                 (/ (* amount stx-ststx) BPS)
+                 (/ (* amount BPS) stx-ststx)))
+  )
+    (ok quote-a)
   )
 )
 
