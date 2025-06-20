@@ -244,11 +244,11 @@
   (let (
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
-      (try! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.router-stableswap-xyk-multihop-v-1-2 swap-helper-a
+      (try! (contract-call? .router-stableswap-xyk-multihop-v-1-2 swap-helper-a
             amount min-received provider swaps-reversed stableswap-tokens stableswap-pools xyk-tokens xyk-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
-      (try! (contract-call? 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.router-stableswap-xyk-multihop-v-1-2 swap-helper-a
+      (try! (contract-call? .router-stableswap-xyk-multihop-v-1-2 swap-helper-a
             swap-a min-received provider swaps-reversed stableswap-tokens stableswap-pools xyk-tokens xyk-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
