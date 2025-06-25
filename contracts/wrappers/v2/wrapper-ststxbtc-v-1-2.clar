@@ -6,11 +6,11 @@
 (define-constant BPS u1000000)
 
 (define-public (quote-ststx-for-ststxbtc
-    (ststx-amount uint) (reserve <reserve-trait>)
+    (amount uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (get-aggregator-fees provider ststx-amount)))
+    (amount-after-aggregator-fees (try! (get-aggregator-fees provider amount)))
     (stx-ststx (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.data-core-v2 get-stx-per-ststx
                      reserve)))
     (stx-amount (/ (* amount-after-aggregator-fees stx-ststx) BPS))
@@ -20,11 +20,11 @@
 )
 
 (define-public (quote-ststxbtc-for-ststx
-    (ststxbtc-amount uint) (reserve <reserve-trait>)
+    (amount uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (get-aggregator-fees provider ststxbtc-amount)))
+    (amount-after-aggregator-fees (try! (get-aggregator-fees provider amount)))
     (stx-ststx (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.data-core-v2 get-stx-per-ststx
                      reserve)))
     (ststx-amount (/ (* amount-after-aggregator-fees BPS) stx-ststx))
@@ -34,20 +34,20 @@
 )
 
 (define-public (swap-ststx-for-ststxbtc
-    (ststx-amount uint) (reserve <reserve-trait>)
+    (amount uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token provider ststx-amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token provider amount)))
     (swap-a (try! (contract-call?
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststx-for-ststxbtc
-                  ststx-amount reserve)))
+                  amount-after-aggregator-fees reserve)))
   )
     (print {
       action: "swap-ststx-for-ststxbtc",
       caller: tx-sender,
       data: {
-        amount: ststx-amount,
+        amount: amount,
         amount-after-aggregator-fees: amount-after-aggregator-fees,
         received: swap-a,
         provider: provider,
@@ -59,20 +59,20 @@
 )
 
 (define-public (swap-ststxbtc-for-ststx
-    (ststxbtc-amount uint) (reserve <reserve-trait>)
+    (amount uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
-    (amount-after-aggregator-fees (try! (transfer-aggregator-fees 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token provider ststxbtc-amount)))
+    (amount-after-aggregator-fees (try! (transfer-aggregator-fees 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token provider amount)))
     (swap-a (try! (contract-call?
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststxbtc-for-ststx
-                  ststxbtc-amount reserve)))
+                  amount-after-aggregator-fees reserve)))
   )
     (print {
       action: "swap-ststxbtc-for-ststx",
       caller: tx-sender,
       data: {
-        amount: ststxbtc-amount,
+        amount: amount,
         amount-after-aggregator-fees: amount-after-aggregator-fees,
         received: swap-a,
         provider: provider,
