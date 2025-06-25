@@ -1,4 +1,4 @@
-;; wrapper-ststxbtc-v-1-1
+;; wrapper-ststxbtc-v-1-2
 
 (use-trait ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
 (use-trait reserve-trait 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-trait-v1.reserve-trait)
