@@ -1,7 +1,9 @@
-;; wrapper-ststxbtc-v-1-2
+;; wrapper-ststxbtc-v-1-3
 
 (use-trait ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
 (use-trait reserve-trait 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-trait-v1.reserve-trait)
+
+(define-constant ERR_MINIMUM_RECEIVED (err u6009))
 
 (define-constant BPS u1000000)
 
@@ -34,7 +36,7 @@
 )
 
 (define-public (swap-ststx-for-ststxbtc
-    (amount uint) (reserve <reserve-trait>)
+    (amount uint) (min-received uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
@@ -43,12 +45,14 @@
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststx-for-ststxbtc
                   amount-after-aggregator-fees reserve)))
   )
+    (asserts! (>= swap-a min-received) ERR_MINIMUM_RECEIVED)
     (print {
       action: "swap-ststx-for-ststxbtc",
       caller: tx-sender,
       data: {
         amount: amount,
         amount-after-aggregator-fees: amount-after-aggregator-fees,
+        min-received: min-received,
         received: swap-a,
         provider: provider,
         reserve: reserve
@@ -59,7 +63,7 @@
 )
 
 (define-public (swap-ststxbtc-for-ststx
-    (amount uint) (reserve <reserve-trait>)
+    (amount uint) (min-received uint) (reserve <reserve-trait>)
     (provider (optional principal))
   )
   (let (
@@ -68,12 +72,14 @@
                   'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststxbtc-for-ststx
                   amount-after-aggregator-fees reserve)))
   )
+    (asserts! (>= swap-a min-received) ERR_MINIMUM_RECEIVED)
     (print {
       action: "swap-ststxbtc-for-ststx",
       caller: tx-sender,
       data: {
         amount: amount,
         amount-after-aggregator-fees: amount-after-aggregator-fees,
+        min-received: min-received,
         received: swap-a,
         provider: provider,
         reserve: reserve
