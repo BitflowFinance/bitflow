@@ -1,8 +1,10 @@
-;; router-ststxbtc-stableswap-v-1-1
+;; router-ststxbtc-stableswap-v-1-2
 
 (use-trait stableswap-ft-trait 'SP2AKWJYC7BNY18W1XXKPGP0YVEK63QJG4793Z2D4.sip-010-trait-ft-standard.sip-010-trait)
 (use-trait stableswap-pool-trait 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.stableswap-pool-trait-v-1-4.stableswap-pool-trait)
 (use-trait ststx-ststxbtc-reserve-trait 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.reserve-trait-v1.reserve-trait)
+
+(define-constant ERR_MINIMUM_RECEIVED (err u6009))
 
 (define-constant BPS u1000000)
 
@@ -126,15 +128,43 @@
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-a
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-a
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
-    (ok swap-b)
+    (begin
+      (asserts! (>= swap-b min-received) ERR_MINIMUM_RECEIVED)
+      (print {
+        action: "swap-helper-a",
+        caller: tx-sender,
+        data: {
+          amount: amount,
+          min-received: min-received,
+          received: swap-b,
+          provider: provider,
+          ststx-ststxbtc-data: {
+            ststx-ststxbtc-path-reversed: ststx-ststxbtc-path-reversed,
+            ststx-ststxbtc-calls-reversed: ststx-ststxbtc-calls-reversed,
+            ststx-ststxbtc-reserve: ststx-ststxbtc-reserve,
+            ststx-ststxbtc-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-a swap-b)
+            }
+          },
+          stableswap-data: {
+            stableswap-tokens: stableswap-tokens,
+            stableswap-pools: stableswap-pools,
+            stableswap-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-b swap-a)
+            }
+          }
+        }
+      })
+      (ok swap-b)
+    )
   )
 )
 
@@ -148,15 +178,43 @@
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-b
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-b
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
-    (ok swap-b)
+    (begin
+      (asserts! (>= swap-b min-received) ERR_MINIMUM_RECEIVED)
+      (print {
+        action: "swap-helper-b",
+        caller: tx-sender,
+        data: {
+          amount: amount,
+          min-received: min-received,
+          received: swap-b,
+          provider: provider,
+          ststx-ststxbtc-data: {
+            ststx-ststxbtc-path-reversed: ststx-ststxbtc-path-reversed,
+            ststx-ststxbtc-calls-reversed: ststx-ststxbtc-calls-reversed,
+            ststx-ststxbtc-reserve: ststx-ststxbtc-reserve,
+            ststx-ststxbtc-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-a swap-b)
+            }
+          },
+          stableswap-data: {
+            stableswap-tokens: stableswap-tokens,
+            stableswap-pools: stableswap-pools,
+            stableswap-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-b swap-a)
+            }
+          }
+        }
+      })
+      (ok swap-b)
+    )
   )
 )
 
@@ -170,15 +228,43 @@
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-c
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-c
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
-    (ok swap-b)
+    (begin
+      (asserts! (>= swap-b min-received) ERR_MINIMUM_RECEIVED)
+      (print {
+        action: "swap-helper-c",
+        caller: tx-sender,
+        data: {
+          amount: amount,
+          min-received: min-received,
+          received: swap-b,
+          provider: provider,
+          ststx-ststxbtc-data: {
+            ststx-ststxbtc-path-reversed: ststx-ststxbtc-path-reversed,
+            ststx-ststxbtc-calls-reversed: ststx-ststxbtc-calls-reversed,
+            ststx-ststxbtc-reserve: ststx-ststxbtc-reserve,
+            ststx-ststxbtc-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-a swap-b)
+            }
+          },
+          stableswap-data: {
+            stableswap-tokens: stableswap-tokens,
+            stableswap-pools: stableswap-pools,
+            stableswap-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-b swap-a)
+            }
+          }
+        }
+      })
+      (ok swap-b)
+    )
   )
 )
 
@@ -192,15 +278,43 @@
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-d
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-d
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
-    (ok swap-b)
+    (begin
+      (asserts! (>= swap-b min-received) ERR_MINIMUM_RECEIVED)
+      (print {
+        action: "swap-helper-d",
+        caller: tx-sender,
+        data: {
+          amount: amount,
+          min-received: min-received,
+          received: swap-b,
+          provider: provider,
+          ststx-ststxbtc-data: {
+            ststx-ststxbtc-path-reversed: ststx-ststxbtc-path-reversed,
+            ststx-ststxbtc-calls-reversed: ststx-ststxbtc-calls-reversed,
+            ststx-ststxbtc-reserve: ststx-ststxbtc-reserve,
+            ststx-ststxbtc-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-a swap-b)
+            }
+          },
+          stableswap-data: {
+            stableswap-tokens: stableswap-tokens,
+            stableswap-pools: stableswap-pools,
+            stableswap-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-b swap-a)
+            }
+          }
+        }
+      })
+      (ok swap-b)
+    )
   )
 )
 
@@ -214,15 +328,43 @@
     (swap-a (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (swap-ststx-ststxbtc amount ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-e
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
     ))
     (swap-b (if (is-eq ststx-ststxbtc-calls-reversed false)
       (try! (contract-call? .stableswap-swap-helper-v-1-5 swap-helper-e
-            amount min-received provider stableswap-tokens stableswap-pools))
+            amount u0 provider stableswap-tokens stableswap-pools))
       (try! (swap-ststx-ststxbtc swap-a ststx-ststxbtc-reserve ststx-ststxbtc-path-reversed))
     ))
   )
-    (ok swap-b)
+    (begin
+      (asserts! (>= swap-b min-received) ERR_MINIMUM_RECEIVED)
+      (print {
+        action: "swap-helper-e",
+        caller: tx-sender,
+        data: {
+          amount: amount,
+          min-received: min-received,
+          received: swap-b,
+          provider: provider,
+          ststx-ststxbtc-data: {
+            ststx-ststxbtc-path-reversed: ststx-ststxbtc-path-reversed,
+            ststx-ststxbtc-calls-reversed: ststx-ststxbtc-calls-reversed,
+            ststx-ststxbtc-reserve: ststx-ststxbtc-reserve,
+            ststx-ststxbtc-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-a swap-b)
+            }
+          },
+          stableswap-data: {
+            stableswap-tokens: stableswap-tokens,
+            stableswap-pools: stableswap-pools,
+            stableswap-swaps: {
+              a: (if (is-eq ststx-ststxbtc-calls-reversed false) swap-b swap-a)
+            }
+          }
+        }
+      })
+      (ok swap-b)
+    )
   )
 )
 
