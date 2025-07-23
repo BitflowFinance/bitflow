@@ -1,4 +1,4 @@
-;; router-ststxbtc-stableswap-xyk-multihop-v-1-3
+;; router-ststxbtc-stable-xyk-multi-v-1-4
 
 (use-trait ft-trait .sip-010-trait-ft-standard-v-1-1.sip-010-trait)
 (use-trait stableswap-pool-trait .stableswap-pool-trait-v-1-4.stableswap-pool-trait)
@@ -740,7 +740,7 @@
 
 (define-private (quote-ststx-ststxbtc (amount uint) (reserve <ststx-ststxbtc-reserve-trait>) (reversed bool))
   (let (
-    (stx-ststx (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.data-core-v2 get-stx-per-ststx
+    (stx-ststx (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.data-core-v3 get-stx-per-ststx
                      reserve)))
     (quote-a (if (is-eq reversed false)
                  (/ (* amount stx-ststx) BPS)
@@ -752,7 +752,7 @@
 
 (define-private (swap-ststx-ststxbtc (amount uint) (reserve <ststx-ststxbtc-reserve-trait>) (reversed bool))
   (ok (if (is-eq reversed false)
-      (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststx-for-ststxbtc amount reserve))
-      (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v1 swap-ststxbtc-for-ststx amount reserve))
+      (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v2 swap-ststx-for-ststxbtc amount reserve))
+      (try! (contract-call? 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.swap-ststx-ststxbtc-v2 swap-ststxbtc-for-ststx amount reserve))
   ))
 )
