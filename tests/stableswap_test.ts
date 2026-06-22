@@ -678,6 +678,35 @@ Clarinet.test({
     },
 });
 
+// Test get-dx returns the same amount as swap-y-for-x for mixed-decimal pairs
+Clarinet.test({
+    name: "Ensure get-dx matches swap-y-for-x after scaled fees",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(10000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(1000000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const quote = chain.callReadOnlyFn("stableswap", "get-dx", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000000)], deployer.address);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100000000), types.uint(0)], deployer.address)
+        ]);
+
+        quote.result.expectOk().expectUint(9994998022);
+        block.receipts[0].result.expectOk().expectUint(9994998022);
+    },
+});
+
 
 // Test swap y for x 9 times and get the same amount
 Clarinet.test({
