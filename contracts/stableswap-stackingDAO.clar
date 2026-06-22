@@ -32,6 +32,9 @@
 ;; Number of tokens per pair
 (define-constant number-of-tokens u2)
 
+;; Permanently locked LP supply minted during pair creation
+(define-constant minimum-liquidity u1000)
+
 ;; Contract deployer
 (define-constant contract-deployer tx-sender)
 
@@ -872,6 +875,7 @@
             (scaled-up-balances (get-scaled-up-token-amounts initial-x-bal initial-y-bal x-decimals y-decimals))
             (initial-x-bal-scaled (get scaled-x scaled-up-balances))
             (initial-y-bal-scaled (get scaled-y scaled-up-balances))
+            (initial-lp-supply (+ initial-x-bal-scaled initial-y-bal-scaled))
         )
 
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
@@ -886,8 +890,12 @@
         ;; Assert that x & y tokens are the same
         (asserts! (is-eq initial-x-bal-scaled initial-y-bal-scaled) (err "err-initial-bal-odd"))
 
-        ;; Mint LP tokens to tx-sender
-        (unwrap! (as-contract (contract-call? lp-token mint lp-owner (+ initial-x-bal-scaled initial-y-bal-scaled))) (err "err-minting-lp-tokens"))
+        ;; Assert that the initial liquidity can cover the permanent lock
+        (asserts! (> initial-lp-supply minimum-liquidity) (err "err-initial-liquidity-too-low"))
+
+        ;; Mint LP tokens to tx-sender and permanently lock minimum liquidity
+        (unwrap! (as-contract (contract-call? lp-token mint lp-owner (- initial-lp-supply minimum-liquidity))) (err "err-minting-lp-tokens"))
+        (unwrap! (as-contract (contract-call? lp-token mint this-contract minimum-liquidity)) (err "err-locking-minimum-liquidity"))
 
         ;; Transfer token x liquidity to this contract
         (unwrap! (stx-transfer? initial-x-bal tx-sender (as-contract tx-sender)) (err "err-transferring-token-x"))
@@ -898,7 +906,7 @@
         ;; Update all appropriate maps
         (ok (map-set PairsDataMap {y-token: (contract-of y-token), lp-token: (contract-of lp-token)} {
             approval: true,
-            total-shares: (+ initial-x-bal-scaled initial-y-bal-scaled),
+            total-shares: initial-lp-supply,
             x-decimals: x-decimals,
             y-decimals: y-decimals,
             balance-x: initial-x-bal,
