@@ -99,6 +99,30 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
+        block.receipts[0].result.expectOk().expectUint(10000)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test swap x for y as a non-admin
+Clarinet.test({
+    name: "Ensure non-admin swap x-token for y-token uses buy fees",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_3 = accounts.get("wallet_3")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], wallet_3.address)
+        ]);
+
         block.receipts[0].result.expectOk().expectUint(9995)
         console.log(JSON.stringify(block.receipts));
     },
@@ -128,7 +152,7 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectUint(9994802280)
+        block.receipts[0].result.expectOk().expectUint(9999802083)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -220,7 +244,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000), types.uint(99940000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectUint(9993220448)
+        block.receipts[0].result.expectOk().expectUint(9998218667)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -602,6 +626,34 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
         ]);
 
+        block.receipts[0].result.expectOk().expectUint(10000)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test swap y for x as a non-admin
+Clarinet.test({
+    name: "Ensure non-admin swap y-token for x-token uses sell fees",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_3 = accounts.get("wallet_3")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(1000000), types.principal(wallet_3.address)], wallet_3.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], wallet_3.address)
+        ]);
+
         block.receipts[0].result.expectOk().expectUint(9995)
         console.log(JSON.stringify(block.receipts));
     },
@@ -631,7 +683,7 @@ Clarinet.test({
         ]);
         // will we always set a lower expectation of min y? if not, change the asserts to >= of "err-min-y-amount"
 
-        block.receipts[0].result.expectOk().expectUint(9994802183)
+        block.receipts[0].result.expectOk().expectUint(9999802083)
         console.log(JSON.stringify(block.receipts));
     },
 });
@@ -695,7 +747,7 @@ Clarinet.test({
             Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(1000000000), types.uint(999400000)], deployer.address)
         ]);
 
-        block.receipts[0].result.expectOk().expectUint(999482190)
+        block.receipts[0].result.expectOk().expectUint(999982180)
         console.log(JSON.stringify(block.receipts));
     },
 });
