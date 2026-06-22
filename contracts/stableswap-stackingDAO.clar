@@ -247,7 +247,7 @@
             (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
             (x-amount-fees-stacking-dao-scaled (/ (* x-amount-scaled swap-fee-stacking-dao) u10000))
             (x-amount-fees-bitflow-scaled (/ (* x-amount-scaled swap-fee-bitflow) u10000))
-            (x-amount-total-fees-scaled (/ (* x-amount total-swap-fee) u10000))
+            (x-amount-total-fees-scaled (/ (* x-amount-scaled total-swap-fee) u10000))
             (updated-x-amount-scaled (- x-amount-scaled x-amount-total-fees-scaled))
             (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
             (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))

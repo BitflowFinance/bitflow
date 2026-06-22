@@ -160,6 +160,56 @@ Clarinet.test({
     },
 });
 
+// Test get-dy for a pair where x and y token decimals differ
+Clarinet.test({
+    name: "Ensure get-dy matches swap output for mixed-decimal pairs",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const yToken = `${deployer.address}.susdt-token`;
+        const lpToken = `${deployer.address}.usda-susdt-lp-token`;
+        const stableswapStackingDao = `${deployer.address}.stableswap-stackingDAO`;
+        const initialX = 1000000000;
+        const initialY = 100000000000;
+        const xAmount = 10000000;
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(200000000000), types.principal(deployer.address)], deployer.address),
+            Tx.contractCall("usda-susdt-lp-token", "set-supply-controller", [types.principal(stableswapStackingDao)], deployer.address),
+        ]);
+
+        const createPair = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [
+                types.principal(yToken),
+                types.principal(lpToken),
+                types.uint(100),
+                types.ascii("test-susdt"),
+                types.uint(initialX),
+                types.uint(initialY),
+            ], deployer.address),
+        ]);
+        createPair.receipts[0].result.expectOk();
+
+        const quote = chain.callReadOnlyFn("stableswap-stackingDAO", "get-dy", [
+            types.principal(yToken),
+            types.principal(lpToken),
+            types.uint(xAmount),
+        ], deployer.address);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [
+                types.principal(yToken),
+                types.principal(lpToken),
+                types.uint(xAmount),
+                types.uint(0),
+            ], deployer.address),
+        ]);
+
+        const quotedDy = quote.result.expectOk();
+        const swappedDy = block.receipts[0].result.expectOk();
+        assertEquals(swappedDy, quotedDy);
+    },
+});
+
 
 // Test swap x for y
 Clarinet.test({
