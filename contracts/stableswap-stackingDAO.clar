@@ -1063,6 +1063,7 @@
         )
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+        (asserts! (> new-convergence-threshold u0) (err "err-invalid-convergence-threshold"))
 
         (ok (var-set convergence-threshold new-convergence-threshold))
     )
