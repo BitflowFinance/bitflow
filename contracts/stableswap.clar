@@ -355,8 +355,8 @@
         ;; Assert that x-amount is less than x10 of current-balance-x
         (asserts! (< x-amount (* u10 current-balance-x)) (err "err-x-amount-too-high"))
 
-        ;; Assert that dy is greater than min-y-amount
-        (asserts! (> dy min-y-amount) (err "err-min-y-amount"))
+        ;; Assert that dy is at least min-y-amount
+        (asserts! (>= dy min-y-amount) (err "err-min-y-amount"))
 
         ;; Transfer updated-x-balance tokens from tx-sender to this contract
         (if (> updated-x-amount u0) 
@@ -459,8 +459,8 @@
         ;; Assert that y-amount is less than x10 of current-balance-y
         (asserts! (< y-amount (* u10 current-balance-y)) (err "err-y-amount-too-high"))
 
-        ;; Assert that dx is greater than min-x-amount
-        (asserts! (> dx min-x-amount) (err "err-min-x-amount"))
+        ;; Assert that dx is at least min-x-amount
+        (asserts! (>= dx min-x-amount) (err "err-min-x-amount"))
 
         ;; Transfer updated-y-balance tokens from tx-sender to this contract
         (if (> updated-y-amount u0) 
@@ -596,8 +596,8 @@
         ;; Assert that d2 is greater than d0
         (asserts! (> d2 d0) (err "err-d2-less-than-d0"))
 
-        ;; Assert that derived mint amount is greater than min-lp-amount
-        (asserts! (> (/ (* current-total-shares (- d2 d0)) d0) min-lp-amount) (err "err-derived-amount-less-than-lp"))
+        ;; Assert that derived mint amount is at least min-lp-amount
+        (asserts! (>= (/ (* current-total-shares (- d2 d0)) d0) min-lp-amount) (err "err-derived-amount-less-than-lp"))
 
         ;; ;; Transfer x-amount-added tokens from tx-sender to this contract
         (if (> x-amount-added-updated u0) 
@@ -670,11 +670,14 @@
             (new-d (get-D new-balance-x-scaled new-balance-y-scaled current-amplification-coefficient))
         )
 
-        ;; Assert that withdrawal-balance-x is greater than min-x-amount
-        (asserts! (> withdrawal-balance-x min-x-amount) (err "err-withdrawal-balance-x-less-than-min-x-amount"))
+        ;; Assert that lp-amount is greater than zero
+        (asserts! (> lp-amount u0) (err "err-lp-amount-zero"))
 
-        ;; Assert that withdrawal-balance-y is greater than min-y-amount
-        (asserts! (> withdrawal-balance-y min-y-amount) (err "err-withdrawal-balance-y-less-than-min-y-amount"))
+        ;; Assert that withdrawal-balance-x is at least min-x-amount
+        (asserts! (>= withdrawal-balance-x min-x-amount) (err "err-withdrawal-balance-x-less-than-min-x-amount"))
+
+        ;; Assert that withdrawal-balance-y is at least min-y-amount
+        (asserts! (>= withdrawal-balance-y min-y-amount) (err "err-withdrawal-balance-y-less-than-min-y-amount"))
 
         ;; Burn LP tokens from tx-sender
         (unwrap! (contract-call? lp-token burn liquidity-remover lp-amount) (err "err-burning-lp-tokens"))
@@ -1032,4 +1035,3 @@
         (ok staking-contract)
     )
 )
-
