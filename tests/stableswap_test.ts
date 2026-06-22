@@ -1676,3 +1676,35 @@ Clarinet.test({
         console.log(JSON.stringify(block.receipts));
     },
 });
+
+// Test convergence threshold admin controls
+Clarinet.test({
+    name: "Ensure admins cannot set convergence threshold to zero",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "change-convergence-threshold", [types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectErr()
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test convergence threshold admin controls
+Clarinet.test({
+    name: "Ensure admins can set convergence threshold above zero",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "change-convergence-threshold", [types.uint(1)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk()
+        console.log(JSON.stringify(block.receipts));
+    },
+});
