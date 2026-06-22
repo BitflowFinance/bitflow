@@ -151,7 +151,7 @@
             (y-amount-scaled (get scaled-y scaled-up-swap-amount))
             (y-amount-fees-lps-scaled (/ (* y-amount-scaled swap-fee-lps) u10000))
             (y-amount-fees-protocol-scaled (/ (* y-amount-scaled swap-fee-protocol) u10000))
-            (y-amount-total-fees-scaled (/ (* y-amount total-swap-fee) u10000))
+            (y-amount-total-fees-scaled (/ (* y-amount-scaled total-swap-fee) u10000))
             (updated-y-amount-scaled (- y-amount-scaled y-amount-total-fees-scaled))
             (updated-y-balance-scaled (+ current-balance-y-scaled updated-y-amount-scaled))
             (new-x-scaled (get-x updated-y-balance-scaled current-balance-x-scaled updated-y-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
@@ -239,7 +239,7 @@
             (x-amount-scaled (get scaled-x scaled-up-swap-amount))
             (x-amount-fees-lps-scaled (/ (* x-amount-scaled swap-fee-lps) u10000))
             (x-amount-fees-protocol-scaled (/ (* x-amount-scaled swap-fee-protocol) u10000))
-            (x-amount-total-fees-scaled (/ (* x-amount total-swap-fee) u10000))
+            (x-amount-total-fees-scaled (/ (* x-amount-scaled total-swap-fee) u10000))
             (updated-x-amount-scaled (- x-amount-scaled x-amount-total-fees-scaled))
             (updated-x-balance-scaled (+ current-balance-x-scaled updated-x-amount-scaled))
             (new-y-scaled (get-y updated-x-balance-scaled current-balance-y-scaled updated-x-amount-scaled (* (get amplification-coefficient pair-data) number-of-tokens)))
@@ -1032,4 +1032,3 @@
         (ok staking-contract)
     )
 )
-
