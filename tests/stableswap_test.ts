@@ -41,6 +41,88 @@ Clarinet.test({
     },
 });
 
+// Test pair creation permanently locks minimum liquidity
+Clarinet.test({
+    name: "Ensure creating a pair locks minimum liquidity",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(10000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(1000000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const lockedLp = chain.callReadOnlyFn("usda-susdt-lp-token", "get-balance", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stableswap")], deployer.address);
+        const ownerLp = chain.callReadOnlyFn("usda-susdt-lp-token", "get-balance", [types.principal(deployer.address)], deployer.address);
+
+        lockedLp.result.expectOk().expectUint(1000);
+        ownerLp.result.expectOk().expectUint(1999999999999000);
+    },
+});
+
+// Test pair creation rejects liquidity that cannot cover the permanent lock
+Clarinet.test({
+    name: "Ensure creating a pair rejects liquidity at or below the lock",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(500), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(500), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(500), types.uint(5)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectErr().expectAscii("err-initial-liquidity-too-low");
+    },
+});
+
+// Test initial LP owner cannot fully empty the pool
+Clarinet.test({
+    name: "Ensure initial LP owner cannot withdraw locked minimum liquidity",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+
+        chain.mineBlock([
+            Tx.contractCall("usda-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(10000000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(100), types.ascii("test"), types.uint(1000000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token"), types.uint(1999999999999000), types.uint(0), types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectTuple()["withdrawal-x-balance"].expectUint(999999999999500);
+        block.receipts[0].result.expectOk().expectTuple()["withdrawal-y-balance"].expectUint(9999999999995);
+
+        const remainingPair = chain.callReadOnlyFn("stableswap", "get-pair-data", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.susdt-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.usda-susdt-lp-token")], deployer.address);
+        const pairTuple = remainingPair.result.expectSome().expectTuple();
+
+        pairTuple["balance-x"].expectUint(500);
+        pairTuple["balance-y"].expectUint(5);
+        pairTuple["total-shares"].expectUint(1000);
+    },
+});
+
 // Test get current cycle
 Clarinet.test({
     name: "Ensure we can get the current cycle",
