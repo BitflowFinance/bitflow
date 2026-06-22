@@ -104,6 +104,34 @@ Clarinet.test({
     },
 });
 
+// Test swap x for y exact minimum output
+Clarinet.test({
+    name: "Ensure swap x-token for y-token allows exact min-y amount",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-x-for-y", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(9995)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectUint(9995)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
 // Test swap x for y
 Clarinet.test({
     name: "Ensure we can swap x-token for y-token",
@@ -600,6 +628,34 @@ Clarinet.test({
 
         const block = chain.mineBlock([
             Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(0)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectUint(9995)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
+// Test swap y for x exact minimum output
+Clarinet.test({
+    name: "Ensure swap y-token for x-token allows exact min-x amount",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("susdt-token", "mint", [types.uint(100000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(10000000000000), types.uint(10000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "swap-y-for-x", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000), types.uint(9995)], deployer.address)
         ]);
 
         block.receipts[0].result.expectOk().expectUint(9995)
@@ -1266,6 +1322,30 @@ Clarinet.test({
     },
 });
 
+// Test add liquidity exact minimum LP output
+Clarinet.test({
+    name: "Ensure add liquidity allows exact min-lp amount",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(100000000000000), types.uint(100000000000000)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "add-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000), types.uint(0), types.uint(9998500)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk().expectUint(9998500)
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
 // Test add liquidity 
 Clarinet.test({
     name: "Ensure we can add liquidity of one token to a pool with different previous balance",
@@ -1517,6 +1597,34 @@ Clarinet.test({
     },
 });
 
+// Test remove liquidity exact minimum outputs
+Clarinet.test({
+    name: "Ensure withdraw liquidity allows exact min token amounts",
+    async fn(chain: Chain, accounts: Map<string, Account>) {
+        const deployer = accounts.get("deployer")!;
+        const wallet_1 = accounts.get("wallet_1")!;
+
+        chain.mineBlock([
+            Tx.contractCall("ststx-token", "mint", [types.uint(500000000000000), types.principal(deployer.address)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "create-pair", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100), types.ascii("test"), types.uint(100000000000000), types.uint(100000000000000)], deployer.address)
+        ]);
+
+        chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "add-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(100000000000000), types.uint(100000000000000), types.uint(0)], deployer.address)
+        ]);
+
+        const block = chain.mineBlock([
+            Tx.contractCall("stableswap-stackingDAO", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000000), types.uint(5000000000000), types.uint(5000000000000)], deployer.address)
+        ]);
+
+        block.receipts[0].result.expectOk()
+        console.log(JSON.stringify(block.receipts));
+    },
+});
+
 // Test remove liquidity 
 Clarinet.test({
     name: "Ensure we can NOT withdraw liquidity from a pool if not min x tokens met",
@@ -1538,7 +1646,7 @@ Clarinet.test({
         ]);
 
         const block = chain.mineBlock([
-            Tx.contractCall("stableswap-stackingDAO", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000000), types.uint(5000000000000), types.uint(50000000000)], deployer.address)
+            Tx.contractCall("stableswap-stackingDAO", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000000), types.uint(5000000000001), types.uint(50000000000)], deployer.address)
         ]);
 
         block.receipts[0].result.expectErr()
@@ -1567,7 +1675,7 @@ Clarinet.test({
         ]);
 
         const block = chain.mineBlock([
-            Tx.contractCall("stableswap-stackingDAO", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000000), types.uint(5000000000000), types.uint(50000000000)], deployer.address)
+            Tx.contractCall("stableswap-stackingDAO", "withdraw-liquidity", [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.ststx-token"), types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.stx-ststx-lp-token"), types.uint(10000000000000), types.uint(0), types.uint(5000000000001)], deployer.address)
         ]);
 
         block.receipts[0].result.expectErr()
