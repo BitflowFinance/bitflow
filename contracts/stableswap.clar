@@ -957,6 +957,8 @@
         )
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+        ;; Reject fee configurations that would underflow swap math (fees are basis points over 10000).
+        (asserts! (< (+ new-lps-fee new-protocol-fee) u10000) (err "err-fee-too-high"))
 
         (ok (var-set swap-fees {lps: new-lps-fee, protocol: new-protocol-fee}))
     )
@@ -970,6 +972,8 @@
         )
         ;; Assert that tx-sender is an admin using is-some & index-of with the admins var
         (asserts! (is-some (index-of current-admins tx-sender)) (err "err-not-admin"))
+        ;; Reject fee configurations that would underflow liquidity math (fees are basis points over 10000).
+        (asserts! (< new-liquidity-fee u10000) (err "err-fee-too-high"))
 
         (ok (var-set liquidity-fees new-liquidity-fee))
     )
